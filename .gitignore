@@ -1,0 +1,6 @@
+theme.txt
+*.new.exe
+*.tmp
+*.log
+/CodexTaskMonitor.exe
+/dist/
