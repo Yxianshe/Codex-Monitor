@@ -36,6 +36,21 @@ namespace LiquidGlassAvaloniaUI
         public static readonly StyledProperty<bool> ChromaticAberrationProperty =
             AvaloniaProperty.Register<LiquidGlassSurface, bool>(nameof(ChromaticAberration), false);
 
+        public static readonly StyledProperty<double> LightProperty =
+            AvaloniaProperty.Register<LiquidGlassSurface, double>(nameof(Light), 0.85);
+
+        public static readonly StyledProperty<double> DepthProperty =
+            AvaloniaProperty.Register<LiquidGlassSurface, double>(nameof(Depth), 1.0);
+
+        public static readonly StyledProperty<double> DispersionProperty =
+            AvaloniaProperty.Register<LiquidGlassSurface, double>(nameof(Dispersion), 1.0);
+
+        public static readonly StyledProperty<double> SplayProperty =
+            AvaloniaProperty.Register<LiquidGlassSurface, double>(nameof(Splay), 2.0);
+
+        public static readonly StyledProperty<double> FlowPhaseProperty =
+            AvaloniaProperty.Register<LiquidGlassSurface, double>(nameof(FlowPhase), 0.0);
+
         public static readonly StyledProperty<double> BlurRadiusProperty =
             AvaloniaProperty.Register<LiquidGlassSurface, double>(nameof(BlurRadius), 2.0);
 
@@ -162,6 +177,10 @@ namespace LiquidGlassAvaloniaUI
                 RefractionAmountProperty,
                 DepthEffectProperty,
                 ChromaticAberrationProperty,
+                LightProperty,
+                DepthProperty,
+                DispersionProperty,
+                SplayProperty,
                 BlurRadiusProperty,
                 VibrancyProperty,
                 BrightnessProperty,
@@ -240,6 +259,13 @@ namespace LiquidGlassAvaloniaUI
             set => SetValue(RefractionAmountProperty, value);
         }
 
+        /// <summary>Edge refraction strength in device-independent pixels.</summary>
+        public double Refraction
+        {
+            get => RefractionAmount;
+            set => RefractionAmount = value;
+        }
+
         public bool DepthEffect
         {
             get => GetValue(DepthEffectProperty);
@@ -252,10 +278,52 @@ namespace LiquidGlassAvaloniaUI
             set => SetValue(ChromaticAberrationProperty, value);
         }
 
+        /// <summary>Fresnel and directional highlight intensity.</summary>
+        public double Light
+        {
+            get => GetValue(LightProperty);
+            set => SetValue(LightProperty, value);
+        }
+
+        /// <summary>Convex edge-band depth multiplier.</summary>
+        public double Depth
+        {
+            get => GetValue(DepthProperty);
+            set => SetValue(DepthProperty, value);
+        }
+
+        /// <summary>RGB edge separation in the refracted sample.</summary>
+        public double Dispersion
+        {
+            get => GetValue(DispersionProperty);
+            set => SetValue(DispersionProperty, value);
+        }
+
+        /// <summary>Controls how quickly refraction falls off from the edge.</summary>
+        public double Splay
+        {
+            get => GetValue(SplayProperty);
+            set => SetValue(SplayProperty, value);
+        }
+
+        /// <summary>Normalized phase used by the animated pearl rim.</summary>
+        public double FlowPhase
+        {
+            get => GetValue(FlowPhaseProperty);
+            set => SetValue(FlowPhaseProperty, value);
+        }
+
         public double BlurRadius
         {
             get => GetValue(BlurRadiusProperty);
             set => SetValue(BlurRadiusProperty, value);
+        }
+
+        /// <summary>Gaussian frost amount. Alias for <see cref="BlurRadius"/>.</summary>
+        public double Frost
+        {
+            get => BlurRadius;
+            set => BlurRadius = value;
         }
 
         public double Vibrancy
@@ -494,6 +562,11 @@ namespace LiquidGlassAvaloniaUI
                 RefractionAmount = RefractionAmount,
                 DepthEffect = DepthEffect,
                 ChromaticAberration = ChromaticAberration,
+                Light = Light,
+                Depth = Depth,
+                Dispersion = Dispersion,
+                Splay = Splay,
+                FlowPhase = FlowPhase,
                 BlurRadius = BlurRadius,
                 Vibrancy = Vibrancy,
                 Brightness = Brightness,
@@ -581,6 +654,7 @@ namespace LiquidGlassAvaloniaUI
                 || change.Property == HighlightOpacityProperty
                 || change.Property == HighlightAngleProperty
                 || change.Property == HighlightFalloffProperty
+                || change.Property == FlowPhaseProperty
                 || change.Property == InnerShadowEnabledProperty
                 || change.Property == InnerShadowRadiusProperty
                 || change.Property == InnerShadowOffsetProperty
@@ -607,6 +681,11 @@ namespace LiquidGlassAvaloniaUI
                    || property == RefractionAmountProperty
                    || property == DepthEffectProperty
                    || property == ChromaticAberrationProperty
+                   || property == LightProperty
+                   || property == DepthProperty
+                   || property == DispersionProperty
+                   || property == SplayProperty
+                   || property == FlowPhaseProperty
                    || property == BlurRadiusProperty
                    || property == VibrancyProperty
                    || property == BrightnessProperty

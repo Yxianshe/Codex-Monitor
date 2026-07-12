@@ -8,9 +8,24 @@ namespace CodexMonitorV2;
 
 internal static class MonitorData
 {
-    internal sealed record TaskSnapshot(string Title, string Detail, long Tokens);
+    internal sealed record TaskSnapshot(
+        string ThreadId,
+        string Title,
+        string CurrentModel,
+        string CurrentEffort,
+        string Tier,
+        long Tokens);
+    internal sealed record ReasoningDescriptor(string Id, string Description);
+    internal sealed record ModelDescriptor(
+        string Id,
+        string DisplayName,
+        string DefaultEffort,
+        IReadOnlyList<ReasoningDescriptor> Efforts,
+        bool IsDefault);
+    internal sealed record DefaultSettings(string Model, string Effort);
+    internal sealed record SettingsUpdateResult(bool Success, string Message);
     internal sealed record WindowLimit(double UsedPercent, long ResetsAt, double WindowMinutes);
-    internal sealed record QuotaSnapshot(WindowLimit Primary, WindowLimit Secondary);
+    internal sealed record QuotaSnapshot(WindowLimit? FiveHour, WindowLimit? Weekly);
 
     private static string _indexStamp = "";
     private static Dictionary<string, string> _titles = new();
@@ -52,53 +67,155 @@ internal static class MonitorData
             string fallback = databaseTitle.Split('\r', '\n')[0].Trim();
             string title = titles.GetValueOrDefault(id, fallback);
             if (title.Length > 80) title = title[..80] + "…";
-            string model = string.IsNullOrWhiteSpace(runtime.Model) ? databaseModel : runtime.Model;
-            string effort = string.IsNullOrWhiteSpace(runtime.Effort) ? databaseEffort : runtime.Effort;
-            string tier = runtime.Tier;
-            string detail = $"{(tier == "priority" ? "⚡ " : "")}{FormatModel(model)}  {FormatEffort(effort)}  {(tier == "priority" ? "1.5×" : "标准")}";
-            result.Add(new TaskSnapshot(title, detail, tokens));
+            string currentModel = string.IsNullOrWhiteSpace(runtime.Model) ? databaseModel : runtime.Model;
+            string currentEffort = string.IsNullOrWhiteSpace(runtime.Effort) ? databaseEffort : runtime.Effort;
+            result.Add(new TaskSnapshot(
+                id,
+                title,
+                currentModel,
+                currentEffort,
+                runtime.Tier,
+                tokens));
         }
         return result;
     }
 
-    public static async Task<QuotaSnapshot?> ReadQuotaAsync()
+    public static async Task<IReadOnlyList<ModelDescriptor>> ReadModelsAsync()
     {
-        string? codex = FindCodexExecutable();
-        if (codex is null) return null;
-
-        ProcessStartInfo info = new(codex, "app-server --stdio")
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = new UTF8Encoding(false)
-        };
-        using Process process = Process.Start(info)!;
+        Process? process = null;
         try
         {
-            await process.StandardInput.WriteLineAsync("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"codex-monitor-v2\",\"version\":\"2.0\"},\"capabilities\":null}}");
-            await process.StandardInput.FlushAsync();
-            if (!await WaitForResponseAsync(process, 1)) return null;
+            process = StartAppServer();
+            await InitializeAppServerAsync(process, experimental: false);
+            JsonElement result = await SendRequestAsync(
+                process,
+                2,
+                "model/list",
+                new { limit = 100, includeHidden = false });
 
-            await process.StandardInput.WriteLineAsync("{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}");
-            await process.StandardInput.WriteLineAsync("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\",\"params\":null}");
-            await process.StandardInput.FlushAsync();
-
-            for (int i = 0; i < 8; i++)
+            List<ModelDescriptor> models = new();
+            foreach (JsonElement item in result.GetProperty("data").EnumerateArray())
             {
-                string? line = await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                if (string.IsNullOrWhiteSpace(line)) return null;
-                using JsonDocument message = JsonDocument.Parse(line);
-                if (!message.RootElement.TryGetProperty("id", out JsonElement id) || id.GetInt32() != 2) continue;
-                JsonElement limits = message.RootElement.GetProperty("result").GetProperty("rateLimits");
-                return new QuotaSnapshot(ParseLimit(limits.GetProperty("primary")), ParseLimit(limits.GetProperty("secondary")));
+                string id = GetString(item, "model");
+                if (id.Length == 0) id = GetString(item, "id");
+                if (id.Length == 0) continue;
+
+                List<ReasoningDescriptor> efforts = new();
+                if (item.TryGetProperty("supportedReasoningEfforts", out JsonElement options))
+                {
+                    foreach (JsonElement option in options.EnumerateArray())
+                    {
+                        string effort = GetString(option, "reasoningEffort");
+                        if (effort.Length > 0)
+                            efforts.Add(new ReasoningDescriptor(effort, GetString(option, "description")));
+                    }
+                }
+
+                models.Add(new ModelDescriptor(
+                    id,
+                    FormatModel(id),
+                    GetString(item, "defaultReasoningEffort"),
+                    efforts,
+                    item.TryGetProperty("isDefault", out JsonElement isDefault) && isDefault.GetBoolean()));
             }
-            return null;
+            return models;
         }
         catch
         {
+            return Array.Empty<ModelDescriptor>();
+        }
+        finally
+        {
+            StopAppServer(process);
+        }
+    }
+
+    public static async Task<DefaultSettings> ReadDefaultSettingsAsync()
+    {
+        Process? process = null;
+        try
+        {
+            process = StartAppServer();
+            await InitializeAppServerAsync(process, experimental: false);
+            JsonElement result = await SendRequestAsync(
+                process,
+                2,
+                "config/read",
+                new { includeLayers = false });
+            JsonElement config = result.GetProperty("config");
+            return new DefaultSettings(
+                GetString(config, "model"),
+                GetString(config, "model_reasoning_effort"));
+        }
+        catch
+        {
+            return new DefaultSettings("", "");
+        }
+        finally
+        {
+            StopAppServer(process);
+        }
+    }
+
+    public static async Task<SettingsUpdateResult> UpdateDefaultSettingsAsync(string model, string effort)
+    {
+        Process? process = null;
+        try
+        {
+            process = StartAppServer();
+            await InitializeAppServerAsync(process, experimental: false);
+            await SendRequestAsync(
+                process,
+                2,
+                "config/batchWrite",
+                new
+                {
+                    edits = new object[]
+                    {
+                        new { keyPath = "model", value = model, mergeStrategy = "upsert" },
+                        new { keyPath = "model_reasoning_effort", value = effort, mergeStrategy = "upsert" }
+                    },
+                    reloadUserConfig = true
+                });
+            return new SettingsUpdateResult(true, "新任务默认模型已保存");
+        }
+        catch (Exception error)
+        {
+            return new SettingsUpdateResult(false, $"默认模型保存失败：{error.Message}");
+        }
+        finally
+        {
+            StopAppServer(process);
+        }
+    }
+
+    public static async Task<QuotaSnapshot?> ReadQuotaAsync()
+    {
+        using Process process = StartAppServer();
+        try
+        {
+            await InitializeAppServerAsync(process, experimental: false);
+            JsonElement result = await SendRequestAsync(process, 2, "account/rateLimits/read", null);
+            if (!result.TryGetProperty("rateLimits", out JsonElement limits)
+                || limits.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException($"rateLimits unavailable: {result}");
+
+            List<WindowLimit> windows = new();
+            AddLimitWindow(limits, "primary", 300, windows);
+            AddLimitWindow(limits, "secondary", 10080, windows);
+            WindowLimit? fiveHour = windows
+                .Where(item => item.WindowMinutes > 0 && item.WindowMinutes < 1440)
+                .OrderBy(item => Math.Abs(item.WindowMinutes - 300))
+                .FirstOrDefault();
+            WindowLimit? weekly = windows
+                .Where(item => item.WindowMinutes >= 1440)
+                .OrderBy(item => Math.Abs(item.WindowMinutes - 10080))
+                .FirstOrDefault();
+            return new QuotaSnapshot(fiveHour, weekly);
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine($"[CodexMonitor] rate-limit read failed: {error.Message}");
             return null;
         }
         finally
@@ -107,22 +224,102 @@ internal static class MonitorData
         }
     }
 
-    private static async Task<bool> WaitForResponseAsync(Process process, int expectedId)
+    private static Process StartAppServer()
     {
-        for (int i = 0; i < 6; i++)
+        string codex = FindCodexExecutable()
+            ?? throw new FileNotFoundException("找不到 Codex 可执行文件");
+        ProcessStartInfo info = new(codex, "app-server --stdio")
         {
-            string? line = await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(8));
-            if (string.IsNullOrWhiteSpace(line)) return false;
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(false),
+            StandardOutputEncoding = new UTF8Encoding(false),
+            StandardErrorEncoding = new UTF8Encoding(false)
+        };
+        return Process.Start(info) ?? throw new InvalidOperationException("无法启动 Codex app-server");
+    }
+
+    private static async Task InitializeAppServerAsync(Process process, bool experimental)
+    {
+        object capabilities = experimental ? new { experimentalApi = true } : new { };
+        await SendRequestAsync(
+            process,
+            1,
+            "initialize",
+            new
+            {
+                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.0" },
+                capabilities
+            });
+        await WriteMessageAsync(process, new { jsonrpc = "2.0", method = "initialized", @params = new { } });
+    }
+
+    private static async Task<JsonElement> SendRequestAsync(
+        Process process,
+        int id,
+        string method,
+        object? parameters)
+    {
+        await WriteMessageAsync(process, new { jsonrpc = "2.0", id, method, @params = parameters });
+        DateTime deadline = DateTime.UtcNow.AddSeconds(12);
+        while (DateTime.UtcNow < deadline)
+        {
+            TimeSpan remaining = deadline - DateTime.UtcNow;
+            if (remaining <= TimeSpan.Zero) break;
+            string? line = await process.StandardOutput.ReadLineAsync().WaitAsync(remaining);
+            if (string.IsNullOrWhiteSpace(line)) continue;
             using JsonDocument message = JsonDocument.Parse(line);
-            if (message.RootElement.TryGetProperty("id", out JsonElement id) && id.GetInt32() == expectedId) return true;
+            if (!message.RootElement.TryGetProperty("id", out JsonElement responseId)
+                || responseId.ValueKind != JsonValueKind.Number
+                || responseId.GetInt32() != id)
+                continue;
+
+            if (message.RootElement.TryGetProperty("error", out JsonElement error))
+                throw new InvalidOperationException(GetString(error, "message") is { Length: > 0 } text ? text : error.ToString());
+            return message.RootElement.GetProperty("result").Clone();
         }
-        return false;
+        throw new TimeoutException($"Codex 请求超时：{method}");
+    }
+
+    private static async Task WriteMessageAsync(Process process, object message)
+    {
+        await process.StandardInput.WriteLineAsync(JsonSerializer.Serialize(message));
+        await process.StandardInput.FlushAsync();
+    }
+
+    private static void StopAppServer(Process? process)
+    {
+        if (process is null) return;
+        try
+        {
+            if (!process.HasExited) process.Kill(true);
+        }
+        catch { }
+        process.Dispose();
     }
 
     private static WindowLimit ParseLimit(JsonElement item) => new(
         item.TryGetProperty("usedPercent", out JsonElement used) ? used.GetDouble() : 0,
         item.TryGetProperty("resetsAt", out JsonElement reset) && reset.ValueKind == JsonValueKind.Number ? reset.GetInt64() : 0,
-        item.TryGetProperty("windowDurationMins", out JsonElement window) ? window.GetDouble() : 0);
+        item.TryGetProperty("windowDurationMins", out JsonElement window) && window.ValueKind == JsonValueKind.Number ? window.GetDouble() : 0);
+
+    private static void AddLimitWindow(
+        JsonElement snapshot,
+        string name,
+        double fallbackWindowMinutes,
+        List<WindowLimit> output)
+    {
+        if (snapshot.TryGetProperty(name, out JsonElement item) && item.ValueKind == JsonValueKind.Object)
+        {
+            WindowLimit limit = ParseLimit(item);
+            output.Add(limit.WindowMinutes > 0
+                ? limit
+                : limit with { WindowMinutes = fallbackWindowMinutes });
+        }
+    }
 
     private static RuntimeState ReadRuntimeState(string path)
     {

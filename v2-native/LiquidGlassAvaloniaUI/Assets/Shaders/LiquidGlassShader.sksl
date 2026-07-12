@@ -1,5 +1,6 @@
-// Rounded SDF liquid lens for Avalonia + SkiaSharp.
-// Uses inward, bounded sampling so a lens can sit near a native window edge without streak artifacts.
+// V2.1 rounded-SDF liquid lens for Avalonia + SkiaSharp.
+// Native equivalent of SVG feDisplacementMap: convex edge displacement is driven by the
+// rounded-rect SDF, with a restrained value-noise perturbation standing in for feTurbulence.
 
 uniform shader content;
 uniform float2 size;
@@ -8,6 +9,10 @@ uniform float refractionHeight;
 uniform float refractionAmount;
 uniform float depthEffect;
 uniform float chromaticAberration;
+uniform float light;
+uniform float depth;
+uniform float dispersion;
+uniform float splay;
 
 const float EDGE_AA = 1.5;
 
@@ -34,6 +39,26 @@ float2 safeCoord(float2 p) {
     return clamp(p, float2(1.0), max(size - float2(1.0), float2(1.0)));
 }
 
+float hash21(float2 p) {
+    p = fract(p * float2(123.34, 456.21));
+    p += dot(p, p + float2(45.32));
+    return fract(p.x * p.y);
+}
+
+float valueNoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float2 u = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash21(i), hash21(i + float2(1.0, 0.0)), u.x),
+        mix(hash21(i + float2(0.0, 1.0)), hash21(i + float2(1.0, 1.0)), u.x),
+        u.y);
+}
+
+float turbulence(float2 p) {
+    return valueNoise(p) * 0.67 + valueNoise(p * 2.03 + float2(17.1, 9.2)) * 0.33;
+}
+
 half4 main(float2 coord) {
     half4 original = content.eval(safeCoord(coord));
     float2 halfSize = size * 0.5;
@@ -43,26 +68,30 @@ half4 main(float2 coord) {
 
     if (sdf > EDGE_AA) return original;
 
-    float band = max(refractionHeight, 1.0);
-    float depth = clamp(-sdf / band, 0.0, 1.0);
-    float rim = 1.0 - depth;
-    float bendProfile = 1.0 - sqrt(max(1.0 - rim * rim, 0.0));
+    float depthAmount = clamp(depth, 0.15, 2.0);
+    float band = max(refractionHeight * depthAmount, 1.0);
+    float depthPosition = clamp(-sdf / band, 0.0, 1.0);
+    float rim = 1.0 - depthPosition;
+    float edge = pow(rim, clamp(splay, 0.45, 4.0));
+    float bendProfile = 1.0 - sqrt(max(1.0 - edge * edge, 0.0));
     float2 normal = roundedBoxNormal(local, halfSize, radius);
 
     if (depthEffect > 0.001) {
         float2 radial = normalize(local + float2(0.0001));
-        normal = normalize(normal + radial * depthEffect * 0.16);
+        normal = normalize(normal + radial * depthEffect * depthAmount * 0.14);
     }
 
-    // A convex pane bends the visible backdrop inward. Keeping the sample on the pane side of
-    // the rim prevents the top/right streaks produced by out-of-range sampling.
+    // Convex refraction bends the visible backdrop inward. Turbulence is intentionally sub-pixel
+    // and edge-weighted: it adds organic liquid motion without turning the pane into water noise.
     float bend = bendProfile * refractionAmount;
-    float2 refracted = safeCoord(coord - normal * bend);
+    float grain = (turbulence(coord * 0.021 + float2(2.7, 8.4)) - 0.5) * edge;
+    float2 tangent = float2(-normal.y, normal.x);
+    float2 refracted = safeCoord(coord - normal * bend + tangent * grain * 1.15);
 
     half4 glass;
     if (chromaticAberration > 0.001) {
-        float chroma = min(2.2, bend * 0.075) * chromaticAberration;
-        float2 shift = normal * chroma;
+        float chroma = min(3.4, abs(bend) * 0.060) * chromaticAberration * clamp(dispersion, 0.0, 3.0);
+        float2 shift = normal * chroma + tangent * grain * 0.18;
         half4 red = content.eval(safeCoord(refracted - shift));
         half4 green = content.eval(refracted);
         half4 blue = content.eval(safeCoord(refracted + shift));
@@ -71,9 +100,9 @@ half4 main(float2 coord) {
         glass = content.eval(refracted);
     }
 
-    // A restrained Fresnel glint provides thickness without drawing a hard white outline.
+    // Soft Fresnel response creates thickness without drawing a second hard border.
     float directional = 0.35 + 0.65 * max(dot(normal, normalize(float2(-0.55, -0.84))), 0.0);
-    float fresnel = pow(rim, 3.0) * 0.14 * directional;
+    float fresnel = pow(rim, 2.7) * (0.045 + clamp(light, 0.0, 2.0) * 0.105) * directional;
     glass.rgb += (half3(1.0) - glass.rgb) * fresnel;
 
     float coverage = 1.0 - smoothstep(-EDGE_AA * 0.5, EDGE_AA * 0.5, sdf);

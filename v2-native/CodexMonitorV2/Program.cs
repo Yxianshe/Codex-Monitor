@@ -29,7 +29,8 @@ internal static class Program
             .UsePlatformDetect()
             .With(new Win32PlatformOptions
             {
-                RenderingMode = new[] { Win32RenderingMode.Software }
+                // Integrated GPUs are sufficient; software remains the remote-desktop fallback.
+                RenderingMode = new[] { Win32RenderingMode.AngleEgl, Win32RenderingMode.Software }
             })
             .UseLiquidGlassPerformanceDefaults()
             .With(new CompositionOptions

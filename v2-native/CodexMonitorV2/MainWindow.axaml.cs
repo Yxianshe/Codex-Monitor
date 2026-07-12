@@ -17,33 +17,64 @@ public sealed partial class MainWindow : Window
 {
     public ObservableCollection<TaskRow> Tasks { get; } = new();
     private readonly DispatcherTimer _dataTimer;
+    private readonly DispatcherTimer _glassTimer;
+    private readonly ConicGradientBrush _flowBorderBrush;
     private bool _dataBusy;
     private Bitmap? _sceneBitmap;
     private bool? _sceneIsDay;
     private bool _showTokens;
     private DateTime _lastQuotaRefresh = DateTime.MinValue;
     private bool? _manualIsDay;
+    private IReadOnlyList<MonitorData.ModelDescriptor> _models = Array.Empty<MonitorData.ModelDescriptor>();
+    private double _flowPhase;
+    private bool _syncingDefaults;
+    private int _defaultChangeVersion;
+    private readonly SemaphoreSlim _defaultWriteGate = new(1, 1);
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
+        _manualIsDay = Environment.GetEnvironmentVariable("CODEX_MONITOR_SCENE")?.ToLowerInvariant() switch
+        {
+            "day" => true,
+            "night" => false,
+            _ => null
+        };
+        _flowBorderBrush = CreateFlowBorderBrush();
+        foreach (string name in new[] { "TokenButton", "ThemeButton", "PinButton", "MinimizeButton", "CloseButton" })
+            this.FindControl<Button>(name)!.BorderBrush = _flowBorderBrush;
+        this.FindControl<ComboBox>("DefaultModelBox")!.SelectionChanged += (_, _) => DefaultModelChanged();
+        this.FindControl<ComboBox>("DefaultEffortBox")!.SelectionChanged += (_, _) => ScheduleDefaultSettingsWrite();
+
         _dataTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _dataTimer.Tick += async (_, _) =>
         {
             ApplySceneBackground();
             await RefreshDataAsync();
         };
+        _glassTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(50)
+        };
+        _glassTimer.Tick += (_, _) => TickGlassAnimation();
         Opened += async (_, _) =>
         {
             ApplyNativeWindowMaterial();
             ApplySceneBackground();
-            await RefreshDataAsync();
+            Task refresh = RefreshDataAsync();
+            Task<IReadOnlyList<MonitorData.ModelDescriptor>> models = MonitorData.ReadModelsAsync();
+            await refresh;
+            _models = await models;
+            await InitializeDefaultSelectorsAsync();
             _dataTimer.Start();
+            _glassTimer.Start();
+            await CapturePreviewIfRequestedAsync();
         };
         Closed += (_, _) =>
         {
             _dataTimer.Stop();
+            _glassTimer.Stop();
             _sceneBitmap?.Dispose();
         };
 
@@ -60,6 +91,115 @@ public sealed partial class MainWindow : Window
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+
+    private static ConicGradientBrush CreateFlowBorderBrush() => new()
+    {
+        Center = RelativePoint.Center,
+        Angle = 0,
+        GradientStops = new GradientStops
+        {
+            new(Color.Parse("#E6FFFFFF"), 0.00),
+            new(Color.Parse("#8FCBF7FF"), 0.18),
+            new(Color.Parse("#6BAE9BFF"), 0.42),
+            new(Color.Parse("#96FFEBC2"), 0.66),
+            new(Color.Parse("#E6FFFFFF"), 1.00)
+        }
+    };
+
+    private void TickGlassAnimation()
+    {
+        if (!IsVisible || WindowState == WindowState.Minimized) return;
+        _flowPhase = (_flowPhase + 1.0 / 240.0) % 1.0;
+        _flowBorderBrush.Angle = _flowPhase * 360.0;
+        this.FindControl<LiquidGlassSurface>("GlassPanel")!.FlowPhase = _flowPhase;
+    }
+
+    private async Task CapturePreviewIfRequestedAsync()
+    {
+        string? path = Environment.GetEnvironmentVariable("CODEX_MONITOR_CAPTURE");
+        if (string.IsNullOrWhiteSpace(path)) return;
+        await Task.Delay(900);
+        string? directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        using RenderTargetBitmap bitmap = new(PixelSize.FromSize(ClientSize, RenderScaling));
+        bitmap.Render(this);
+        bitmap.Save(path);
+    }
+
+    private async Task InitializeDefaultSelectorsAsync()
+    {
+        _syncingDefaults = true;
+        ComboBox modelBox = this.FindControl<ComboBox>("DefaultModelBox")!;
+        ComboBox effortBox = this.FindControl<ComboBox>("DefaultEffortBox")!;
+        ModelChoice[] choices = _models.Select(ModelChoice.From).ToArray();
+        modelBox.ItemsSource = choices;
+
+        MonitorData.DefaultSettings settings = await MonitorData.ReadDefaultSettingsAsync();
+        ModelChoice? selected = choices.FirstOrDefault(item => item.Id.Equals(settings.Model, StringComparison.OrdinalIgnoreCase))
+            ?? choices.FirstOrDefault(item => item.IsDefault)
+            ?? choices.FirstOrDefault();
+        modelBox.SelectedItem = selected;
+        RebuildDefaultEfforts(selected, settings.Effort);
+        UpdateDefaultChoiceColors();
+        _syncingDefaults = false;
+    }
+
+    private void DefaultModelChanged()
+    {
+        if (_syncingDefaults) return;
+        _syncingDefaults = true;
+        ModelChoice? model = this.FindControl<ComboBox>("DefaultModelBox")!.SelectedItem as ModelChoice;
+        RebuildDefaultEfforts(model, model?.DefaultEffort ?? "");
+        UpdateDefaultChoiceColors();
+        _syncingDefaults = false;
+        ScheduleDefaultSettingsWrite();
+    }
+
+    private void RebuildDefaultEfforts(ModelChoice? model, string preferred)
+    {
+        ComboBox effortBox = this.FindControl<ComboBox>("DefaultEffortBox")!;
+        EffortChoice[] efforts = model?.Efforts.ToArray() ?? Array.Empty<EffortChoice>();
+        effortBox.ItemsSource = efforts;
+        effortBox.SelectedItem = efforts.FirstOrDefault(item => item.Id.Equals(preferred, StringComparison.OrdinalIgnoreCase))
+            ?? efforts.FirstOrDefault(item => item.Id.Equals(model?.DefaultEffort, StringComparison.OrdinalIgnoreCase))
+            ?? efforts.FirstOrDefault();
+    }
+
+    private void UpdateDefaultChoiceColors()
+    {
+        ComboBox modelBox = this.FindControl<ComboBox>("DefaultModelBox")!;
+        ComboBox effortBox = this.FindControl<ComboBox>("DefaultEffortBox")!;
+        modelBox.Background = (modelBox.SelectedItem as ModelChoice)?.Background ?? Brushes.Transparent;
+        effortBox.Background = (effortBox.SelectedItem as EffortChoice)?.Background ?? Brushes.Transparent;
+    }
+
+    private void ScheduleDefaultSettingsWrite()
+    {
+        if (_syncingDefaults) return;
+        UpdateDefaultChoiceColors();
+        int version = ++_defaultChangeVersion;
+        _ = WriteDefaultSettingsAsync(version);
+    }
+
+    private async Task WriteDefaultSettingsAsync(int version)
+    {
+        await Task.Delay(300);
+        await _defaultWriteGate.WaitAsync();
+        try
+        {
+            if (version != _defaultChangeVersion) return;
+            ModelChoice? model = this.FindControl<ComboBox>("DefaultModelBox")!.SelectedItem as ModelChoice;
+            EffortChoice? effort = this.FindControl<ComboBox>("DefaultEffortBox")!.SelectedItem as EffortChoice;
+            if (model is null || effort is null) return;
+            MonitorData.SettingsUpdateResult result = await MonitorData.UpdateDefaultSettingsAsync(model.Id, effort.Id);
+            if (version == _defaultChangeVersion)
+                this.FindControl<TextBlock>("StatusText")!.Text = result.Message;
+        }
+        finally
+        {
+            _defaultWriteGate.Release();
+        }
+    }
 
     private void ApplyNativeWindowMaterial()
     {
@@ -126,11 +266,11 @@ public sealed partial class MainWindow : Window
         backdrop.RenderTransformOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative);
         backdrop.RenderTransform = new ScaleTransform(isDay ? 1.06 : 1.0, isDay ? 1.02 : 1.0);
 
-        Color lensTint = Color.Parse(isDay ? "#260D0502" : "#18020A18");
+        Color lensTint = Color.Parse(isDay ? "#140D0502" : "#0C020A18");
         this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;
         this.FindControl<LiquidGlassSurface>("UsageLens")!.SurfaceColor = lensTint;
         this.FindControl<Border>("ForegroundLayer")!.Background = new SolidColorBrush(
-            Color.Parse(isDay ? "#10080302" : "#08020710"));
+            Color.Parse(isDay ? "#08080302" : "#04020710"));
         Bitmap? old = _sceneBitmap;
         _sceneBitmap = next;
         _sceneIsDay = isDay;
@@ -144,9 +284,24 @@ public sealed partial class MainWindow : Window
         try
         {
             IReadOnlyList<MonitorData.TaskSnapshot> snapshots = await MonitorData.ReadActiveTasksAsync();
-            Tasks.Clear();
+            HashSet<string> activeIds = snapshots.Select(item => item.ThreadId).ToHashSet(StringComparer.Ordinal);
+            for (int i = Tasks.Count - 1; i >= 0; i--)
+                if (!activeIds.Contains(Tasks[i].ThreadId)) Tasks.RemoveAt(i);
+
             foreach (MonitorData.TaskSnapshot item in snapshots)
-                Tasks.Add(new TaskRow(item.Title, item.Detail, item.Tokens) { ShowTokens = _showTokens });
+            {
+                TaskRow? row = Tasks.FirstOrDefault(existing => existing.ThreadId == item.ThreadId);
+                if (row is null)
+                {
+                    row = new TaskRow(item) { ShowTokens = _showTokens };
+                    Tasks.Add(row);
+                }
+                else
+                {
+                    row.Update(item);
+                    row.ShowTokens = _showTokens;
+                }
+            }
 
             this.FindControl<TextBlock>("StatusText")!.Text = snapshots.Count == 0
                 ? "暂无正在调用的任务"
@@ -174,7 +329,7 @@ public sealed partial class MainWindow : Window
     private void UpdateQuota(MonitorData.QuotaSnapshot quota)
     {
         UpdateQuotaRow(
-            quota.Primary,
+            quota.FiveHour,
             300,
             this.FindControl<ProgressBar>("FiveQuotaBar")!,
             this.FindControl<TextBlock>("FiveQuotaValue")!,
@@ -182,10 +337,10 @@ public sealed partial class MainWindow : Window
             this.FindControl<RingGauge>("FiveResetRing")!,
             this.FindControl<TextBlock>("FiveResetValue")!,
             this.FindControl<TextBlock>("FiveResetCaption")!,
-            reset => $"{reset:HH:mm} 重置");
+            reset => $"{reset:M月d日 HH:mm}");
 
         UpdateQuotaRow(
-            quota.Secondary,
+            quota.Weekly,
             10080,
             this.FindControl<ProgressBar>("WeekQuotaBar")!,
             this.FindControl<TextBlock>("WeekQuotaValue")!,
@@ -193,11 +348,11 @@ public sealed partial class MainWindow : Window
             this.FindControl<RingGauge>("WeekResetRing")!,
             this.FindControl<TextBlock>("WeekResetValue")!,
             this.FindControl<TextBlock>("WeekResetCaption")!,
-            reset => $"{reset:M月d日} 重置");
+            reset => $"{reset:M月d日 HH:mm}");
     }
 
     private static void UpdateQuotaRow(
-        MonitorData.WindowLimit limit,
+        MonitorData.WindowLimit? limit,
         double fallbackWindowMinutes,
         ProgressBar bar,
         TextBlock valueText,
@@ -207,12 +362,29 @@ public sealed partial class MainWindow : Window
         TextBlock resetCaption,
         Func<DateTime, string> formatReset)
     {
+        if (limit is null)
+        {
+            bar.Value = 0;
+            valueText.Text = "--%";
+            quotaCaption.Text = "当前账户未提供";
+            ring.Value = 0;
+            resetValue.Text = "--";
+            resetCaption.Text = "暂无日期";
+            return;
+        }
+
         double used = Math.Clamp(limit.UsedPercent, 0, 100);
         int remaining = (int)Math.Round(100 - used);
         bar.Value = remaining;
         valueText.Text = $"{remaining}%";
         quotaCaption.Text = $"已用 {(int)Math.Round(used)}%";
-        if (limit.ResetsAt <= 0) return;
+        if (limit.ResetsAt <= 0)
+        {
+            ring.Value = 0;
+            resetValue.Text = "--";
+            resetCaption.Text = "暂无日期";
+            return;
+        }
 
         long seconds = Math.Max(0, limit.ResetsAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         double windowMinutes = limit.WindowMinutes > 0 ? limit.WindowMinutes : fallbackWindowMinutes;
@@ -253,17 +425,27 @@ public sealed partial class MainWindow : Window
 
 public sealed class TaskRow : INotifyPropertyChanged
 {
-    public TaskRow(string title, string detail, long tokens = 0)
+    private long _tokens;
+
+    internal TaskRow(MonitorData.TaskSnapshot snapshot)
     {
-        Title = title;
-        ModelDetail = detail;
-        Tokens = tokens;
+        ThreadId = snapshot.ThreadId;
+        Update(snapshot);
     }
 
-    public string Title { get; }
-    public string ModelDetail { get; }
-    public long Tokens { get; }
-    public string Detail => ShowTokens ? $"Σ {FormatTokens(Tokens)} Token" : ModelDetail;
+    public string ThreadId { get; }
+    public string Title { get; private set; } = "";
+    public string ModelDisplay { get; private set; } = "--";
+    public string EffortDisplay { get; private set; } = "--";
+    public IBrush ModelAccent { get; private set; } = Brushes.Transparent;
+    public IBrush ModelBackground { get; private set; } = Brushes.Transparent;
+    public IBrush EffortAccent { get; private set; } = Brushes.Transparent;
+    public IBrush EffortBackground { get; private set; } = Brushes.Transparent;
+    public string TokenDetail => $"Σ {FormatTokens(_tokens)} Token";
+    public bool TokenVisible => ShowTokens;
+    public bool SettingsVisible => !ShowTokens;
+    public string CurrentSummary { get; private set; } = "";
+
     private bool _showTokens;
     public bool ShowTokens
     {
@@ -272,11 +454,43 @@ public sealed class TaskRow : INotifyPropertyChanged
         {
             if (_showTokens == value) return;
             _showTokens = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Detail)));
+            OnChanged(nameof(TokenVisible));
+            OnChanged(nameof(SettingsVisible));
         }
     }
 
+    internal void Update(MonitorData.TaskSnapshot snapshot)
+    {
+        if (Title != snapshot.Title)
+        {
+            Title = snapshot.Title;
+            OnChanged(nameof(Title));
+        }
+        _tokens = snapshot.Tokens;
+        OnChanged(nameof(TokenDetail));
+
+        ModelChoice model = ModelChoice.Fallback(snapshot.CurrentModel);
+        EffortChoice effort = EffortChoice.From(snapshot.CurrentEffort);
+        ModelDisplay = model.DisplayName;
+        EffortDisplay = effort.DisplayName;
+        ModelAccent = model.Accent;
+        ModelBackground = model.Background;
+        EffortAccent = effort.Accent;
+        EffortBackground = effort.Background;
+        CurrentSummary = $"当前回合：{ModelDisplay} · {EffortDisplay}{(snapshot.Tier == "priority" ? " · Priority" : "")}";
+        OnChanged(nameof(ModelDisplay));
+        OnChanged(nameof(EffortDisplay));
+        OnChanged(nameof(ModelAccent));
+        OnChanged(nameof(ModelBackground));
+        OnChanged(nameof(EffortAccent));
+        OnChanged(nameof(EffortBackground));
+        OnChanged(nameof(CurrentSummary));
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnChanged(string property) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
 
     private static string FormatTokens(long value) => value switch
     {
@@ -284,5 +498,103 @@ public sealed class TaskRow : INotifyPropertyChanged
         >= 1_000_000 => $"{value / 1_000_000d:0.0}M",
         >= 1_000 => $"{value / 1_000d:0.0}K",
         _ => value.ToString("N0")
+    };
+
+}
+
+public sealed class ModelChoice
+{
+    private ModelChoice(
+        string id,
+        string displayName,
+        string defaultEffort,
+        IReadOnlyList<EffortChoice> efforts,
+        bool isDefault)
+    {
+        Id = id;
+        DisplayName = displayName;
+        DefaultEffort = defaultEffort;
+        Efforts = efforts;
+        IsDefault = isDefault;
+        Accent = new SolidColorBrush(ModelAccent(id));
+        Color color = ModelAccent(id);
+        Background = new SolidColorBrush(Color.FromArgb(54, color.R, color.G, color.B));
+    }
+
+    public string Id { get; }
+    public string DisplayName { get; }
+    public string DefaultEffort { get; }
+    public IReadOnlyList<EffortChoice> Efforts { get; }
+    public bool IsDefault { get; }
+    public IBrush Accent { get; }
+    public IBrush Background { get; }
+
+    internal static ModelChoice From(MonitorData.ModelDescriptor model) => new(
+        model.Id,
+        model.DisplayName,
+        model.DefaultEffort,
+        model.Efforts.Select(item => EffortChoice.From(item.Id)).ToArray(),
+        model.IsDefault);
+
+    internal static ModelChoice Fallback(string model) => new(
+        model,
+        PrettyName(model),
+        "medium",
+        new[] { "low", "medium", "high", "xhigh", "max", "ultra" }.Select(EffortChoice.From).ToArray(),
+        false);
+
+    private static string PrettyName(string model)
+    {
+        if (string.IsNullOrWhiteSpace(model)) return "--";
+        string value = model.StartsWith("gpt-", StringComparison.OrdinalIgnoreCase) ? model[4..] : model;
+        return string.Join(' ', value.Split('-', StringSplitOptions.RemoveEmptyEntries).Select(part =>
+            part.Length > 0 && char.IsLetter(part[0])
+                ? char.ToUpperInvariant(part[0]) + part[1..]
+                : part));
+    }
+
+    private static Color ModelAccent(string model)
+    {
+        string value = model.ToLowerInvariant();
+        if (value.Contains("sol")) return Color.Parse("#6EA8FF");
+        if (value.Contains("terra")) return Color.Parse("#58C7A7");
+        if (value.Contains("luna")) return Color.Parse("#A78BFA");
+        if (value.Contains("spark")) return Color.Parse("#FFB45F");
+        if (value.Contains("mini")) return Color.Parse("#66D4E8");
+        Color[] palette =
+        {
+            Color.Parse("#7AA7FF"), Color.Parse("#64D2B1"), Color.Parse("#B38CFF"),
+            Color.Parse("#FF8FB7"), Color.Parse("#F2C66D")
+        };
+        int hash = value.Aggregate(17, (current, character) => unchecked(current * 31 + character));
+        return palette[(hash & int.MaxValue) % palette.Length];
+    }
+}
+
+public sealed class EffortChoice
+{
+    private EffortChoice(string id, string displayName, Color accent)
+    {
+        Id = id;
+        DisplayName = displayName;
+        Accent = new SolidColorBrush(accent);
+        Background = new SolidColorBrush(Color.FromArgb(58, accent.R, accent.G, accent.B));
+    }
+
+    public string Id { get; }
+    public string DisplayName { get; }
+    public IBrush Accent { get; }
+    public IBrush Background { get; }
+
+    internal static EffortChoice From(string effort) => effort.ToLowerInvariant() switch
+    {
+        "minimal" => new("minimal", "最低", Color.Parse("#9AA6B6")),
+        "low" => new("low", "低", Color.Parse("#66AFFF")),
+        "medium" => new("medium", "中", Color.Parse("#58C7A7")),
+        "high" => new("high", "高", Color.Parse("#F2B55F")),
+        "xhigh" => new("xhigh", "极高", Color.Parse("#F08B68")),
+        "max" => new("max", "最高", Color.Parse("#D878E8")),
+        "ultra" => new("ultra", "超高", Color.Parse("#9B8CFF")),
+        _ => new(effort, string.IsNullOrWhiteSpace(effort) ? "--" : effort, Color.Parse("#AAB6C8"))
     };
 }

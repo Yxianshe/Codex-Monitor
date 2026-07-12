@@ -6,6 +6,9 @@ uniform float4 cornerRadii; // [topLeft, topRight, bottomRight, bottomLeft]
 uniform float4 color;       // RGBA (0..1)
 uniform float angle;        // radians
 uniform float falloff;      // >= 0
+uniform float flowPhase;    // normalized 0..1, loops forever
+
+const float TWO_PI = 6.28318530718;
 
 float radiusAt(float2 centeredCoord, float4 radii) {
     if (centeredCoord.x >= 0.0) {
@@ -46,8 +49,21 @@ half4 main(float2 coord) {
 
     float d = dot(grad, normal);
     float intensity = pow(abs(d), max(falloff, 0.0));
-    // Skia expects premultiplied output colors.
-    half a = half(color.a * intensity);
-    half3 rgb = half3(color.rgb) * a;
+
+    // A low-saturation pearl spectrum travels around the single physical rim.
+    float perimeter = atan(centeredCoord.y, centeredCoord.x) / TWO_PI + 0.5;
+    float travel = fract(perimeter - flowPhase);
+    float pearl = 0.5 + 0.5 * cos(TWO_PI * travel);
+    float3 cyan = float3(0.62, 0.91, 1.0);
+    float3 violet = float3(0.78, 0.68, 1.0);
+    float3 warm = float3(1.0, 0.94, 0.78);
+    float3 spectrum = mix(cyan, violet, smoothstep(0.0, 0.55, pearl));
+    spectrum = mix(spectrum, warm, smoothstep(0.68, 1.0, pearl));
+    float3 pearlColor = mix(color.rgb, spectrum, 0.48);
+
+    // Keep the static rim faint and let one narrow pearl highlight travel forever.
+    float movingHighlight = pow(clamp(pearl, 0.0, 1.0), 8.0);
+    half a = half(color.a * (0.08 + intensity * 0.20 + movingHighlight * 0.72));
+    half3 rgb = half3(pearlColor) * a;
     return half4(rgb, a);
 }

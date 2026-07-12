@@ -509,9 +509,10 @@ namespace LiquidGlassAvaloniaUI
                         zoomOutMargin = (1.0 / zoom - 1.0) * halfMaxSize;
                     }
 
-                    // Chromatic aberration can sample up to ~2x refractionAmount in the worst case,
-                    // so capture a wider border to avoid clamping artifacts.
-                    double refractionMargin = Math.Abs(surface.RefractionAmount) * (surface.ChromaticAberration ? 2.0 : 1.0);
+                    double dispersionMargin = surface.ChromaticAberration
+                        ? Math.Max(0.0, surface.Dispersion) * 4.0
+                        : 0.0;
+                    double refractionMargin = Math.Abs(surface.RefractionAmount) + dispersionMargin;
 
                     return Math.Max(
                         minInflate,

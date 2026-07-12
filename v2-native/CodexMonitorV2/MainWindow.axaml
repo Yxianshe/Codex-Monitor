@@ -28,6 +28,29 @@
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid ClipToBounds="False">
+            <glass:LiquidGlassSurface IsHitTestVisible="False"
+                                      CornerRadius="16" RefractionHeight="10" Refraction="9"
+                                      DepthEffect="True" Depth="0.78"
+                                      ChromaticAberration="True" Dispersion="0.48"
+                                      Frost="0.35" Splay="2.2" Light="0.92"
+                                      BackdropOpacity="0.98" SurfaceColor="#0DFFFFFF"
+                                      HighlightEnabled="False" ShadowEnabled="False"/>
+            <Border CornerRadius="{TemplateBinding CornerRadius}"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                Padding="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+          </Grid>
+        </ControlTemplate>
+      </Setter>
     </Style>
     <Style Selector="Button.top:pointerover">
       <Setter Property="Foreground" Value="#FFFFFFFF"/>
@@ -44,33 +67,58 @@
       <Setter Property="CornerRadius" Value="4"/>
       <Setter Property="Background" Value="#28B7C0CB"/>
     </Style>
+    <Style Selector="ComboBox.taskChoice">
+      <Setter Property="Height" Value="28"/>
+      <Setter Property="Padding" Value="8,0"/>
+      <Setter Property="Margin" Value="5,0,0,0"/>
+      <Setter Property="CornerRadius" Value="13"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BorderBrush" Value="#48FFFFFF"/>
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ComboBox.taskChoice:pointerover">
+      <Setter Property="BorderBrush" Value="#B8FFFFFF"/>
+    </Style>
   </Window.Styles>
 
   <Grid Background="#081322">
     <Border Margin="0" CornerRadius="10" ClipToBounds="True"
             BorderThickness="0">
-      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
+      <Image x:Name="BackdropImage" Stretch="UniformToFill" Opacity="1"
              RenderOptions.BitmapInterpolationMode="HighQuality"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
                               Margin="2"
                               Opacity="1"
-                              CornerRadius="10"
-                              RefractionHeight="34"
-                              RefractionAmount="32"
+                              CornerRadius="22"
+                              RefractionHeight="20"
+                              Refraction="16"
                               DepthEffect="True"
+                              Depth="0.90"
                               ChromaticAberration="True"
-                              BlurRadius="0.35"
-                              Vibrancy="1.22"
-                              Brightness="0.02"
-                              Contrast="1.16"
+                              Dispersion="0.55"
+                              Frost="0.55"
+                              Splay="2.40"
+                              Light="1.02"
+                              Vibrancy="1.16"
+                              Brightness="0.035"
+                              Contrast="1.11"
                               BackdropOpacity="1"
                               TintColor="#00000000"
-                              SurfaceColor="#03FFFFFF"
-                              HighlightEnabled="False"
+                              SurfaceColor="#07FFFFFF"
+                              HighlightEnabled="True"
+                              HighlightWidth="0.7"
+                              HighlightBlurRadius="0.7"
+                              HighlightOpacity="0.52"
+                              HighlightAngle="-38"
+                              HighlightFalloff="0.72"
                               ShadowEnabled="False"/>
-    <Border x:Name="ForegroundLayer" Margin="16" Background="#08020710" CornerRadius="20"
+    <Border x:Name="ForegroundLayer" Margin="18" Background="#06020710" CornerRadius="20"
             glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
         <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto" Background="#01000000">
@@ -102,31 +150,81 @@
           </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="2,0">
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="2,0">
           <TextBlock Text="正在调用的任务" FontSize="14.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-          <TextBlock x:Name="StatusText" Grid.Column="1" FontSize="12" Foreground="#EAFFFFFF"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
+                      VerticalAlignment="Center" Spacing="4"
+                      ToolTip.Tip="设置 Codex 新任务默认值；运行中的任务只读显示，当前回合不能从外部热切换">
+            <TextBlock Text="默认" FontSize="10.5" Foreground="#CFFFFFFF" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DefaultModelBox" Classes="taskChoice" Width="108" Margin="0">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Ellipse Width="7" Height="7" Fill="{Binding Accent}"/>
+                    <TextBlock Text="{Binding DisplayName}" Foreground="#FFFFFFFF"
+                               TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox x:Name="DefaultEffortBox" Classes="taskChoice" Width="70" Margin="0">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Ellipse Width="7" Height="7" Fill="{Binding Accent}"/>
+                    <TextBlock Text="{Binding DisplayName}" Foreground="#FFFFFFFF"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+          <TextBlock x:Name="StatusText" Grid.Column="2" MaxWidth="116" FontSize="11"
+                     Foreground="#EAFFFFFF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
         </Grid>
 
         <Grid x:Name="TaskCard" Grid.Row="2" MinHeight="92">
           <glass:LiquidGlassSurface x:Name="TaskLens" IsHitTestVisible="False"
-                                    CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
-                                    DepthEffect="True" ChromaticAberration="False" BlurRadius="0.65"
-                                    Vibrancy="1.10" Brightness="0.02" Contrast="1.06"
-                                    BackdropOpacity="0.98" SurfaceColor="#18020A18"
-                                    HighlightEnabled="False"
+                                    CornerRadius="18" RefractionHeight="18" Refraction="16"
+                                    DepthEffect="True" Depth="0.82"
+                                    ChromaticAberration="True" Dispersion="0.42"
+                                    Frost="0.48" Splay="2.15" Light="0.78"
+                                    Vibrancy="1.08" Brightness="0.02" Contrast="1.05"
+                                    BackdropOpacity="0.98" SurfaceColor="#10020A18"
+                                    HighlightEnabled="True" HighlightWidth="0.45"
+                                    HighlightBlurRadius="0.55" HighlightOpacity="0.28"
                                     ShadowEnabled="False"/>
           <ScrollViewer Margin="14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Tasks}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#16030914" BorderThickness="0"
-                          CornerRadius="13" Padding="10,7" Margin="1,2">
-                    <Grid ColumnDefinitions="*,Auto">
+                  <Border Background="#11030914" BorderThickness="0"
+                          CornerRadius="13" Padding="10,6" Margin="1,2"
+                          ToolTip.Tip="{Binding CurrentSummary}">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
                                  FontSize="13.5" Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                      <Border Grid.Column="1" Background="#22FFFFFF"
-                              BorderThickness="0" CornerRadius="12" Padding="9,4">
-                        <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="#F4FFFFFF"/>
+                      <Border Grid.Column="1" Grid.ColumnSpan="3" IsVisible="{Binding TokenVisible}"
+                              Background="#22FFFFFF" BorderThickness="0" CornerRadius="12" Padding="9,4">
+                        <TextBlock Text="{Binding TokenDetail}" FontSize="11.5" Foreground="#F4FFFFFF"/>
+                      </Border>
+                      <TextBlock Grid.Column="1" IsVisible="{Binding SettingsVisible}" Text="当前"
+                                 FontSize="9.5" Foreground="#C8FFFFFF" VerticalAlignment="Center"/>
+                      <Border Grid.Column="2" Width="108" Height="26" Margin="5,0,0,0"
+                              IsVisible="{Binding SettingsVisible}" Background="{Binding ModelBackground}"
+                              BorderBrush="#42FFFFFF" BorderThickness="1" CornerRadius="13" Padding="8,0">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                          <Ellipse Width="7" Height="7" Fill="{Binding ModelAccent}"/>
+                          <TextBlock Text="{Binding ModelDisplay}" Foreground="#FFFFFFFF" FontSize="11.5"
+                                     TextTrimming="CharacterEllipsis" MaxWidth="78"/>
+                        </StackPanel>
+                      </Border>
+                      <Border Grid.Column="3" Width="66" Height="26" Margin="5,0,0,0"
+                              IsVisible="{Binding SettingsVisible}" Background="{Binding EffortBackground}"
+                              BorderBrush="#42FFFFFF" BorderThickness="1" CornerRadius="13" Padding="8,0">
+                        <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                          <Ellipse Width="7" Height="7" Fill="{Binding EffortAccent}"/>
+                          <TextBlock Text="{Binding EffortDisplay}" Foreground="#FFFFFFFF" FontSize="11.5"/>
+                        </StackPanel>
                       </Border>
                     </Grid>
                   </Border>
@@ -143,14 +241,17 @@
 
         <Grid x:Name="UsageCard" Grid.Row="4">
           <glass:LiquidGlassSurface x:Name="UsageLens" IsHitTestVisible="False"
-                                    CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
-                                    DepthEffect="True" ChromaticAberration="False" BlurRadius="0.65"
-                                    Vibrancy="1.10" Brightness="0.02" Contrast="1.06"
-                                    BackdropOpacity="0.98" SurfaceColor="#18020A18"
-                                    HighlightEnabled="False"
+                                    CornerRadius="18" RefractionHeight="18" Refraction="16"
+                                    DepthEffect="True" Depth="0.82"
+                                    ChromaticAberration="True" Dispersion="0.42"
+                                    Frost="0.48" Splay="2.15" Light="0.78"
+                                    Vibrancy="1.08" Brightness="0.02" Contrast="1.05"
+                                    BackdropOpacity="0.98" SurfaceColor="#10020A18"
+                                    HighlightEnabled="True" HighlightWidth="0.45"
+                                    HighlightBlurRadius="0.55" HighlightOpacity="0.28"
                                     ShadowEnabled="False"/>
           <Grid Margin="20,10" RowDefinitions="64,1,64">
-            <Grid ColumnDefinitions="72,*,1,145">
+            <Grid ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
                 <TextBlock Text="5 小时" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 <TextBlock Text="限额周期" FontSize="10.5" Foreground="#CCFFFFFF"/>
@@ -164,22 +265,25 @@
                 <TextBlock x:Name="FiveQuotaCaption" Text="等待更新" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
               </StackPanel>
               <Border Grid.Column="2" Background="#38FFFFFF" Margin="0,10"/>
-              <Grid Grid.Column="3" ColumnDefinitions="62,*" Margin="12,0,0,0">
-                <Grid Width="62" Height="62">
+              <Border Grid.Column="3" Background="#14FFFFFF" BorderBrush="#3FFFFFFF"
+                      BorderThickness="1" CornerRadius="16" Margin="10,2,0,2" Padding="7,3">
+                <Grid ColumnDefinitions="54,*">
+                <Grid Width="52" Height="52">
                   <local:RingGauge x:Name="FiveResetRing" Value="0" Track="#42D8DCE5" Stroke="#9B8CFF"/>
-                  <TextBlock x:Name="FiveResetValue" Text="--" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+                  <TextBlock x:Name="FiveResetValue" Text="--" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
                   <TextBlock Text="重置" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                  <TextBlock Text="剩余时间" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                  <TextBlock Text="下次日期" FontSize="9.5" Foreground="#BFFFFFFF"/>
                   <TextBlock x:Name="FiveResetCaption" Text="--" FontSize="10.5" Foreground="#CCFFFFFF"/>
                 </StackPanel>
-              </Grid>
+                </Grid>
+              </Border>
             </Grid>
 
             <Border Grid.Row="1" Background="#28FFFFFF" Margin="4,0"/>
 
-            <Grid Grid.Row="2" ColumnDefinitions="72,*,1,145">
+            <Grid Grid.Row="2" ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
                 <TextBlock Text="每周" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 <TextBlock Text="限额周期" FontSize="10.5" Foreground="#CCFFFFFF"/>
@@ -193,17 +297,20 @@
                 <TextBlock x:Name="WeekQuotaCaption" Text="等待更新" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
               </StackPanel>
               <Border Grid.Column="2" Background="#38FFFFFF" Margin="0,10"/>
-              <Grid Grid.Column="3" ColumnDefinitions="62,*" Margin="12,0,0,0">
-                <Grid Width="62" Height="62">
+              <Border Grid.Column="3" Background="#14FFFFFF" BorderBrush="#3FFFFFFF"
+                      BorderThickness="1" CornerRadius="16" Margin="10,2,0,2" Padding="7,3">
+                <Grid ColumnDefinitions="54,*">
+                <Grid Width="52" Height="52">
                   <local:RingGauge x:Name="WeekResetRing" Value="0" Track="#42E2DDD7" Stroke="#EDAD60"/>
-                  <TextBlock x:Name="WeekResetValue" Text="--" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+                  <TextBlock x:Name="WeekResetValue" Text="--" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,0,0">
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
                   <TextBlock Text="重置" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                  <TextBlock Text="剩余时间" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                  <TextBlock Text="下次日期" FontSize="9.5" Foreground="#BFFFFFFF"/>
                   <TextBlock x:Name="WeekResetCaption" Text="--" FontSize="10.5" Foreground="#CCFFFFFF"/>
                 </StackPanel>
-              </Grid>
+                </Grid>
+              </Border>
             </Grid>
           </Grid>
         </Grid>
@@ -211,7 +318,7 @@
       </Border>
 
     <Grid glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
-      <Border x:Name="MoveGrip" Width="300" Height="82" HorizontalAlignment="Left" VerticalAlignment="Top"
+      <Border x:Name="MoveGrip" Width="300" Height="52" HorizontalAlignment="Left" VerticalAlignment="Top"
               Background="#01000000" Margin="10,0,0,0"/>
       <Border x:Name="TopGrip" Height="10" VerticalAlignment="Top" Background="#01000000" Margin="18,0" Cursor="SizeNorthSouth"/>
       <Border x:Name="BottomGrip" Height="10" VerticalAlignment="Bottom" Background="#01000000" Margin="18,0" Cursor="SizeNorthSouth"/>

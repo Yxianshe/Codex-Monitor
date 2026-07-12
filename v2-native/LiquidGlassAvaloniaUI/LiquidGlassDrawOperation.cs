@@ -212,10 +212,14 @@ namespace LiquidGlassAvaloniaUI
                     };
                     lensUniforms["cornerRadii"] = cornerRadii;
                     lensUniforms["refractionHeight"] = refractionHeight;
-                    // The lens shader expects a negative refraction amount.
-                    lensUniforms["refractionAmount"] = -refractionAmount;
+                    // Positive displacement samples toward the pane interior, like a convex droplet.
+                    lensUniforms["refractionAmount"] = refractionAmount;
                     lensUniforms["depthEffect"] = _parameters.DepthEffect ? 1.0f : 0.0f;
                     lensUniforms["chromaticAberration"] = _parameters.ChromaticAberration ? 1.0f : 0.0f;
+                    lensUniforms["light"] = (float)Clamp(_parameters.Light, 0.0, 2.0);
+                    lensUniforms["depth"] = (float)Clamp(_parameters.Depth, 0.15, 2.0);
+                    lensUniforms["dispersion"] = (float)Clamp(_parameters.Dispersion, 0.0, 3.0);
+                    lensUniforms["splay"] = (float)Clamp(_parameters.Splay, 0.45, 4.0);
 
                     using SKRuntimeEffectChildren lensChildren = new(s_lensEffect);
                     lensChildren["content"] = lensInput;
@@ -518,7 +522,10 @@ namespace LiquidGlassAvaloniaUI
                 zoomOutMargin = (1.0 / zoom - 1.0) * halfMaxSize;
             }
 
-            double refractionMargin = Math.Abs(parameters.RefractionAmount) * (parameters.ChromaticAberration ? 2.0 : 1.0);
+            double dispersionMargin = parameters.ChromaticAberration
+                ? Math.Max(0.0, parameters.Dispersion) * 4.0
+                : 0.0;
+            double refractionMargin = Math.Abs(parameters.RefractionAmount) + dispersionMargin;
             double blurMargin = parameters.BlurRadius * 3.0;
 
             return Math.Max(8.0, refractionMargin + blurMargin + offsetMargin + zoomOutMargin + 8.0) * scaling;
@@ -704,6 +711,7 @@ namespace LiquidGlassAvaloniaUI
             float angleRad = (float)(_parameters.HighlightAngleDegrees * (Math.PI / 180.0));
             uniforms["angle"] = angleRad;
             uniforms["falloff"] = (float)Clamp(_parameters.HighlightFalloff, 0.0, 8.0);
+            uniforms["flowPhase"] = (float)(_parameters.FlowPhase - Math.Floor(_parameters.FlowPhase));
 
             using SKRuntimeEffectChildren children = new(s_highlightEffect);
             using SKShader? shader = s_highlightEffect.ToShader(uniforms, children);
