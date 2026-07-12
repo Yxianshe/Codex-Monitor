@@ -109,24 +109,14 @@ public static class NativeBackdrop {
 }
 
 public static class NativeDesktopCapture {
-    private const uint WDA_EXCLUDEFROMCAPTURE = 0x11;
-
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
 
-    [DllImport("user32.dll")]
-    private static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint affinity);
-
     [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr handle);
-
-    public static bool ExcludeFromCapture(IntPtr hwnd) {
-        try { return SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE); }
-        catch { return false; }
-    }
 
     public static Bitmap CaptureWindowArea(IntPtr hwnd) {
         RECT rect;
@@ -272,7 +262,7 @@ $xaml = @'
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
-      <!-- Live desktop sample; the window is excluded from capture to avoid recursion. -->
+      <!-- Startup desktop sample. Kept static so remote-desktop capture can still see this window. -->
       <Image Name="DesktopBackdrop" Grid.RowSpan="5" Margin="-16" Stretch="Fill" Opacity="0.94"
              IsHitTestVisible="False">
         <Image.Effect>
@@ -634,7 +624,7 @@ $liquidHighlight = $window.FindName('LiquidHighlight')
 $spectralBlue = $window.FindName('SpectralBlue')
 $spectralRose = $window.FindName('SpectralRose')
 $script:windowHandle = [IntPtr]::Zero
-$script:desktopCaptureEnabled = $false
+$script:desktopCaptureEnabled = $true
 
 function Update-DesktopBackdrop {
     if (-not $script:desktopCaptureEnabled -or -not $desktopBackdrop) { return }
@@ -1210,9 +1200,6 @@ function Refresh-View {
 $timer = [Windows.Threading.DispatcherTimer]::new()
 $timer.Interval = [TimeSpan]::FromSeconds(5)
 $timer.Add_Tick({ Refresh-View })
-$backdropTimer = [Windows.Threading.DispatcherTimer]::new()
-$backdropTimer.Interval = [TimeSpan]::FromMilliseconds(180)
-$backdropTimer.Add_Tick({ Update-DesktopBackdrop })
 $window.Add_SourceInitialized({
     $handle = [Windows.Interop.WindowInteropHelper]::new($window).Handle
     $script:windowHandle = $handle
@@ -1220,20 +1207,19 @@ $window.Add_SourceInitialized({
     if ($source -and $source.CompositionTarget) {
         $source.CompositionTarget.BackgroundColor = [Windows.Media.Colors]::Transparent
     }
-    $script:desktopCaptureEnabled = [NativeDesktopCapture]::ExcludeFromCapture($handle)
-    if (-not $script:desktopCaptureEnabled -and -not [NativeBackdrop]::Enable($handle)) {
+    # Capture once before first render. WDA_EXCLUDEFROMCAPTURE is intentionally
+    # avoided because it makes the whole widget invisible to remote-desktop apps.
+    Update-DesktopBackdrop
+    if (-not [NativeBackdrop]::Enable($handle)) {
         $window.Background = New-ColorBrush '#FFF8FAFC'
     }
 })
 $window.Add_ContentRendered({
-    Update-DesktopBackdrop
     Refresh-View
     $timer.Start()
-    if ($script:desktopCaptureEnabled) { $backdropTimer.Start() }
 })
 $window.Add_Closed({
     $timer.Stop()
-    $backdropTimer.Stop()
     if ($script:quotaJob) {
         Stop-Job $script:quotaJob -ErrorAction SilentlyContinue
         Remove-Job $script:quotaJob -Force -ErrorAction SilentlyContinue
