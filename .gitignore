@@ -6,3 +6,6 @@ theme.txt
 /*-preview*.exe
 /assets/v2-liquid-glass-preview.png
 /dist/
+/.tools/
+/v2-native/**/bin/
+/v2-native/**/obj/
