@@ -41,7 +41,7 @@
 
   <Grid>
     <Border CornerRadius="28" ClipToBounds="True">
-      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.48"/>
+      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.50"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"

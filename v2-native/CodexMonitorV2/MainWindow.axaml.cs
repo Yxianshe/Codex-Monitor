@@ -93,7 +93,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplySceneBackground()
     {
-        bool isDay = DateTime.Now.Hour is >= 6 and < 18;
+        bool isDay = DateTime.Now.Hour is >= 7 and < 19;
         if (_sceneIsDay == isDay) return;
 
         Uri uri = new($"avares://CodexMonitorV2/Assets/{(isDay ? "sun" : "moon")}.png");
