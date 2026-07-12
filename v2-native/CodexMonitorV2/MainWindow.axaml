@@ -48,23 +48,26 @@
 
   <Grid Background="#081322">
     <Border Margin="0" CornerRadius="10" ClipToBounds="True"
-            BorderBrush="#72FFFFFF" BorderThickness="1">
+            BorderBrush="#30FFFFFF" BorderThickness="1">
       <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
-             RenderTransformOrigin="0,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
+             RenderTransformOrigin="0.5,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
         <Image.RenderTransform>
-          <ScaleTransform ScaleX="1.08" ScaleY="1"/>
+          <TransformGroup>
+            <ScaleTransform ScaleX="1.08" ScaleY="1"/>
+            <TranslateTransform X="18"/>
+          </TransformGroup>
         </Image.RenderTransform>
       </Image>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
-                              Margin="0"
+                              Margin="6"
                               Opacity="1"
-                              CornerRadius="10"
-                              RefractionHeight="20"
-                              RefractionAmount="28"
+                              CornerRadius="16"
+                              RefractionHeight="34"
+                              RefractionAmount="32"
                               DepthEffect="True"
-                              ChromaticAberration="False"
+                              ChromaticAberration="True"
                               BlurRadius="0.35"
                               Vibrancy="1.22"
                               Brightness="0.02"
@@ -116,7 +119,7 @@
         </Grid>
 
         <glass:LiquidGlassSurface x:Name="TaskCard" Grid.Row="2" MinHeight="92"
-                                  CornerRadius="18" RefractionHeight="11" RefractionAmount="16"
+                                  CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
                                   DepthEffect="True" ChromaticAberration="True" BlurRadius="1.15"
                                   Vibrancy="1.12" Brightness="0.025" Contrast="1.08"
                                   BackdropOpacity="0.94" SurfaceColor="#16030A14"
@@ -151,7 +154,7 @@
         </Grid>
 
         <glass:LiquidGlassSurface x:Name="UsageCard" Grid.Row="4"
-                                  CornerRadius="18" RefractionHeight="11" RefractionAmount="16"
+                                  CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
                                   DepthEffect="True" ChromaticAberration="True" BlurRadius="1.15"
                                   Vibrancy="1.12" Brightness="0.025" Contrast="1.08"
                                   BackdropOpacity="0.94" SurfaceColor="#16030A14"
