@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Rendering.Composition;
 using LiquidGlassAvaloniaUI;
 using System.Runtime.InteropServices;
 
@@ -26,7 +27,16 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .With(new Win32PlatformOptions
+            {
+                RenderingMode = new[] { Win32RenderingMode.Software }
+            })
             .UseLiquidGlassPerformanceDefaults()
+            .With(new CompositionOptions
+            {
+                UseRegionDirtyRectClipping = false,
+                MaxDirtyRects = 1
+            })
             .LogToTrace();
 
     private static void ActivateExisting()

@@ -16,11 +16,10 @@ namespace CodexMonitorV2;
 public sealed partial class MainWindow : Window
 {
     public ObservableCollection<TaskRow> Tasks { get; } = new();
-    private readonly DispatcherTimer _backdropTimer;
     private readonly DispatcherTimer _dataTimer;
-    private bool _captureBusy;
     private bool _dataBusy;
-    private Bitmap? _backdropBitmap;
+    private Bitmap? _sceneBitmap;
+    private bool? _sceneIsDay;
     private bool _showTokens;
     private int _themeIndex;
     private DateTime _lastQuotaRefresh = DateTime.MinValue;
@@ -38,23 +37,24 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = this;
-        _backdropTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(280) };
-        _backdropTimer.Tick += async (_, _) => await RefreshBackdropAsync();
         _dataTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _dataTimer.Tick += async (_, _) => await RefreshDataAsync();
+        _dataTimer.Tick += async (_, _) =>
+        {
+            ApplySceneBackground();
+            await RefreshDataAsync();
+        };
         Opened += async (_, _) =>
         {
             ApplyNativeWindowMaterial();
-            await RefreshBackdropAsync();
+            ApplySceneBackground();
             await RefreshDataAsync();
-            _backdropTimer.Start();
             _dataTimer.Start();
         };
+        SizeChanged += (_, _) => ApplyNativeWindowMaterial();
         Closed += (_, _) =>
         {
-            _backdropTimer.Stop();
             _dataTimer.Stop();
-            _backdropBitmap?.Dispose();
+            _sceneBitmap?.Dispose();
         };
 
         this.FindControl<Control>("TitleBar")!.PointerPressed += (_, e) =>
@@ -82,45 +82,27 @@ public sealed partial class MainWindow : Window
         DwmSetWindowAttribute(hwnd, 33, ref rounded, sizeof(int));
         int noSystemBorder = unchecked((int)0xFFFFFFFE);
         DwmSetWindowAttribute(hwnd, 34, ref noSystemBorder, sizeof(int));
+
+        double scale = RenderScaling;
+        int width = Math.Max(1, (int)Math.Ceiling(Bounds.Width * scale));
+        int height = Math.Max(1, (int)Math.Ceiling(Bounds.Height * scale));
+        int radius = Math.Max(1, (int)Math.Round(28 * scale));
+        nint region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2);
+        if (region != 0 && SetWindowRgn(hwnd, region, true) == 0) DeleteObject(region);
     }
 
-    private async Task RefreshBackdropAsync()
+    private void ApplySceneBackground()
     {
-        if (_captureBusy || WindowState == WindowState.Minimized) return;
-        nint handle = TryGetPlatformHandle()?.Handle ?? 0;
-        if (handle == 0) return;
+        bool isDay = DateTime.Now.Hour is >= 6 and < 18;
+        if (_sceneIsDay == isDay) return;
 
-        _captureBusy = true;
-        try
-        {
-            BackdropCapture.Frame? frame = await Task.Run(() => BackdropCapture.CaptureWindowBehind(handle));
-            if (frame is null) return;
-
-            WriteableBitmap next = new(
-                new PixelSize(frame.Width, frame.Height),
-                new Vector(96, 96),
-                PixelFormat.Bgra8888,
-                AlphaFormat.Opaque);
-            using (ILockedFramebuffer locked = next.Lock())
-            {
-                int sourceStride = frame.Width * 4;
-                for (int y = 0; y < frame.Height; y++)
-                    Marshal.Copy(frame.Pixels, y * sourceStride, locked.Address + y * locked.RowBytes, sourceStride);
-            }
-
-            this.FindControl<Image>("BackdropImage")!.Source = next;
-            Bitmap? old = _backdropBitmap;
-            _backdropBitmap = next;
-            old?.Dispose();
-        }
-        catch
-        {
-            // Acrylic/transparent fallback remains visible when a protected window rejects PrintWindow.
-        }
-        finally
-        {
-            _captureBusy = false;
-        }
+        Uri uri = new($"avares://CodexMonitorV2/Assets/{(isDay ? "sun" : "moon")}.png");
+        Bitmap next = new(AssetLoader.Open(uri));
+        this.FindControl<Image>("BackdropImage")!.Source = next;
+        Bitmap? old = _sceneBitmap;
+        _sceneBitmap = next;
+        _sceneIsDay = isDay;
+        old?.Dispose();
     }
 
     private async Task RefreshDataAsync()
@@ -233,6 +215,9 @@ public sealed partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
+    [DllImport("gdi32.dll")] private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
+    [DllImport("user32.dll")] private static extern int SetWindowRgn(nint hwnd, nint region, bool redraw);
+    [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
 }
 
 public sealed class TaskRow : INotifyPropertyChanged

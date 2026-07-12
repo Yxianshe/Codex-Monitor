@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="..\..\Codex.ico" Link="Assets\Codex.ico" />
+    <AvaloniaResource Include="Assets\*.png" />
     <EmbeddedResource Include="..\..\sqlite3.exe" LogicalName="PortableSqlite" />
   </ItemGroup>
 </Project>

@@ -22,9 +22,10 @@
       <Setter Property="Background" Value="#36060B12"/>
       <Setter Property="Foreground" Value="#FFFFFFFF"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Focusable" Value="False"/>
     </Style>
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="#2E060B12"/>
+      <Setter Property="Background" Value="#26060B12"/>
       <Setter Property="BorderBrush" Value="#70FFFFFF"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="17"/>
@@ -37,34 +38,34 @@
   </Window.Styles>
 
   <Grid>
-    <Border CornerRadius="32" ClipToBounds="True">
+    <Border CornerRadius="28" ClipToBounds="True">
       <Image x:Name="BackdropImage" Stretch="Fill"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
-                              CornerRadius="32"
-                              RefractionHeight="18"
-                              RefractionAmount="22"
+                              CornerRadius="28"
+                              RefractionHeight="10"
+                              RefractionAmount="12"
                               DepthEffect="True"
                               ChromaticAberration="True"
-                              BlurRadius="5"
-                              Vibrancy="1.12"
-                              Brightness="-0.03"
-                              Contrast="1.06"
+                              BlurRadius="1.2"
+                              Vibrancy="1.05"
+                              Brightness="-0.06"
+                              Contrast="1.08"
                               BackdropOpacity="1"
-                              TintColor="#0EFFFFFF"
-                              SurfaceColor="#08FFFFFF"
+                              TintColor="#00000000"
+                              SurfaceColor="#08000000"
                               HighlightEnabled="True"
-                              HighlightWidth="0.72"
-                              HighlightBlurRadius="0.58"
-                              HighlightOpacity="0.32"
+                              HighlightWidth="0.42"
+                              HighlightBlurRadius="0.30"
+                              HighlightOpacity="0.16"
                               HighlightAngle="55"
                               ShadowEnabled="True"
-                              ShadowRadius="26"
-                              ShadowOffset="0,7"
-                              ShadowColor="#44000000"
-                              ShadowOpacity="1">
-      <Border Margin="16" Background="#18030910" CornerRadius="20">
+                              ShadowRadius="1"
+                              ShadowOffset="0,1"
+                              ShadowColor="#24000000"
+                              ShadowOpacity="0.35">
+      <Border Margin="16" Background="#36030910" CornerRadius="20">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
         <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto">
           <StackPanel Spacing="1">
@@ -73,10 +74,23 @@
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal">
             <Button x:Name="TokenButton" Classes="top" Content="Token" Width="64"/>
-            <Button x:Name="ThemeButton" Classes="top" Content="◉" FontSize="17"/>
-            <Button x:Name="PinButton" Classes="top" Content="◆" FontSize="12"/>
-            <Button x:Name="MinimizeButton" Classes="top" Content="−" FontSize="18"/>
-            <Button x:Name="CloseButton" Classes="top" Content="×" FontSize="19" Foreground="#9A5961" Background="#52FFF2F2"/>
+            <Button x:Name="ThemeButton" Classes="top" Width="34" Padding="0">
+              <Grid Width="18" Height="18">
+                <Ellipse Stroke="#DFFFFFFF" StrokeThickness="2"/>
+                <Ellipse Width="7" Height="7" Fill="#9B8CFF" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2"/>
+                <Ellipse Width="7" Height="7" Fill="#58C7A7" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
+              </Grid>
+            </Button>
+            <Button x:Name="PinButton" Classes="top" Width="34" Padding="0">
+              <PathIcon Width="15" Height="15"
+                        Data="M14,2 L14,4 L13,5 L13,10 L15,12 L15,14 L9,14 L9,21 L7,21 L7,14 L1,14 L1,12 L3,10 L3,5 L2,4 L2,2 Z"/>
+            </Button>
+            <Button x:Name="MinimizeButton" Classes="top" Width="34" Padding="0">
+              <Border Width="13" Height="2" CornerRadius="1" Background="#FFFFFFFF"/>
+            </Button>
+            <Button x:Name="CloseButton" Classes="top" Width="34" Padding="0" Foreground="#FFFFA4AA" Background="#52FFF2F2">
+              <PathIcon Width="13" Height="13" Data="M2,1 L7,6 L12,1 L13,2 L8,7 L13,12 L12,13 L7,8 L2,13 L1,12 L6,7 L1,2 Z"/>
+            </Button>
           </StackPanel>
         </Grid>
 
@@ -90,7 +104,7 @@
             <ItemsControl ItemsSource="{Binding Tasks}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#32060B12" BorderBrush="#48FFFFFF" BorderThickness="1"
+                  <Border Background="#2C060B12" BorderBrush="#48FFFFFF" BorderThickness="1"
                           CornerRadius="13" Padding="10,7" Margin="1,2">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
