@@ -51,29 +51,30 @@
   </Window.Styles>
 
   <Grid Background="#01000000">
-    <Border Margin="2" CornerRadius="26" ClipToBounds="True">
-      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.30"/>
+    <Border Margin="2" CornerRadius="26" ClipToBounds="True"
+            BorderBrush="#A8FFFFFF" BorderThickness="1">
+      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.35"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
                               Margin="2"
-                              Opacity="0.30"
+                              Opacity="0.78"
                               CornerRadius="26"
-                              RefractionHeight="14"
-                              RefractionAmount="20"
+                              RefractionHeight="16"
+                              RefractionAmount="24"
                               DepthEffect="True"
                               ChromaticAberration="True"
-                              BlurRadius="0.2"
+                              BlurRadius="0.5"
                               Vibrancy="1.18"
                               Brightness="0.02"
                               Contrast="1.16"
-                              BackdropOpacity="0.05"
+                              BackdropOpacity="0.22"
                               TintColor="#00000000"
-                              SurfaceColor="#04000000"
+                              SurfaceColor="#0AFFFFFF"
                               HighlightEnabled="True"
-                              HighlightWidth="0.42"
-                              HighlightBlurRadius="0.30"
-                              HighlightOpacity="0.28"
+                              HighlightWidth="0.58"
+                              HighlightBlurRadius="0.38"
+                              HighlightOpacity="0.42"
                               HighlightAngle="55"
                               ShadowEnabled="False"/>
     <Border Margin="16" Background="#12030910" CornerRadius="20">

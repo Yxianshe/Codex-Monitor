@@ -75,9 +75,10 @@ public sealed partial class MainWindow : Window
         int noSystemBorder = unchecked((int)0xFFFFFFFE);
         DwmSetWindowAttribute(hwnd, 34, ref noSystemBorder, sizeof(int));
 
-        double scale = RenderScaling;
-        int width = Math.Max(1, (int)Math.Ceiling(Bounds.Width * scale));
-        int height = Math.Max(1, (int)Math.Ceiling(Bounds.Height * scale));
+        if (!GetWindowRect(hwnd, out NativeRect rect)) return;
+        int width = Math.Max(1, rect.Right - rect.Left);
+        int height = Math.Max(1, rect.Bottom - rect.Top);
+        double scale = Bounds.Width > 0 ? width / Bounds.Width : RenderScaling;
         int radius = Math.Max(1, (int)Math.Round(28 * scale));
         nint region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2);
         if (region != 0 && SetWindowRgn(hwnd, region, true) == 0) DeleteObject(region);
@@ -294,6 +295,7 @@ public sealed partial class MainWindow : Window
     [DllImport("gdi32.dll")] private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
     [DllImport("user32.dll")] private static extern int SetWindowRgn(nint hwnd, nint region, bool redraw);
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(nint hwnd, out NativeRect rect);
     private static NativePoint GetMessagePoint()
     {
         uint packed = GetMessagePos();
@@ -303,6 +305,8 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")] private static extern uint GetMessagePos();
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint { public int X, Y; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect { public int Left, Top, Right, Bottom; }
 }
 
 public sealed class TaskRow : INotifyPropertyChanged
