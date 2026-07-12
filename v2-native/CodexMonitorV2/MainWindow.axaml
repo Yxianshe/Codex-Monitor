@@ -52,10 +52,7 @@
       <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
              RenderTransformOrigin="0.5,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
         <Image.RenderTransform>
-          <TransformGroup>
-            <ScaleTransform ScaleX="1.08" ScaleY="1"/>
-            <TranslateTransform X="18"/>
-          </TransformGroup>
+          <ScaleTransform ScaleX="1.06" ScaleY="1.02"/>
         </Image.RenderTransform>
       </Image>
     </Border>
