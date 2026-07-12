@@ -66,7 +66,7 @@ public static class NativeBackdrop {
             ACCENT_POLICY policy = new ACCENT_POLICY {
                 AccentState = 4, // ACCENT_ENABLE_ACRYLICBLURBEHIND
                 AccentFlags = 2,
-                GradientColor = unchecked((int)0x20FFFFFF),
+                GradientColor = unchecked((int)0x12FFFFFF),
                 AnimationId = 0
             };
             int size = Marshal.SizeOf(typeof(ACCENT_POLICY));
@@ -133,6 +133,11 @@ $xaml = @'
                         GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
+    <SolidColorBrush x:Key="TaskRowBackground" Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="TaskRowBorder" Color="#52FFFFFF"/>
+    <SolidColorBrush x:Key="TaskRowText" Color="#252529"/>
+    <SolidColorBrush x:Key="TaskChipBackground" Color="#CAE7E9F4"/>
+    <SolidColorBrush x:Key="TaskChipText" Color="#252529"/>
     <Style x:Key="FlatProgress" TargetType="ProgressBar">
       <Setter Property="Height" Value="8"/>
       <Setter Property="Background" Value="#E5E5E7"/>
@@ -215,28 +220,61 @@ $xaml = @'
         <Border.BorderBrush>
           <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#F4FFFFFF" Offset="0"/>
-            <GradientStop Color="#82E8F7FF" Offset="0.28"/>
+            <GradientStop Color="#A8FFFFFF" Offset="0.28"/>
             <GradientStop Color="#38FFFFFF" Offset="0.58"/>
-            <GradientStop Color="#A8FFF0F8" Offset="1"/>
+            <GradientStop Color="#B8FFFFFF" Offset="1"/>
           </LinearGradientBrush>
         </Border.BorderBrush>
       </Border>
       <Border Name="SpectralBlue" Grid.RowSpan="5" Margin="-12.4,-13.4,-13.6,-12.6" CornerRadius="19"
-              BorderThickness="0.8" BorderBrush="#7C8BD9FF" Background="Transparent"
+              BorderThickness="0.8" BorderBrush="#8CFFFFFF" Background="Transparent"
               IsHitTestVisible="False"/>
       <Border Name="SpectralRose" Grid.RowSpan="5" Margin="-13.6,-12.6,-12.4,-13.4" CornerRadius="19"
-              BorderThickness="0.8" BorderBrush="#68FF9FCB" Background="Transparent"
+              BorderThickness="0.8" BorderBrush="#58FFFFFF" Background="Transparent"
               IsHitTestVisible="False"/>
       <Border Name="LiquidHighlight" Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.48">
         <Border.Background>
           <RadialGradientBrush Center="0.13,0.06" GradientOrigin="0.13,0.06" RadiusX="0.72" RadiusY="0.68">
             <GradientStop Color="#F2FFFFFF" Offset="0"/>
             <GradientStop Color="#64FFFFFF" Offset="0.3"/>
-            <GradientStop Color="#16D9F5FF" Offset="0.66"/>
+            <GradientStop Color="#22FFFFFF" Offset="0.66"/>
             <GradientStop Color="#00FFFFFF" Offset="1"/>
           </RadialGradientBrush>
         </Border.Background>
       </Border>
+      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.72">
+        <Border.Background>
+          <RadialGradientBrush Center="0.98,0.04" GradientOrigin="0.98,0.04" RadiusX="0.7" RadiusY="0.82">
+            <GradientStop Color="#56FFFFFF" Offset="0"/>
+            <GradientStop Color="#24FFFFFF" Offset="0.42"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Border.Background>
+      </Border>
+      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.58">
+        <Border.Background>
+          <RadialGradientBrush Center="0.92,1.02" GradientOrigin="0.92,1.02" RadiusX="0.76" RadiusY="0.78">
+            <GradientStop Color="#4CFFFFFF" Offset="0"/>
+            <GradientStop Color="#1EFFFFFF" Offset="0.42"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Border.Background>
+      </Border>
+      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.56">
+        <Border.Background>
+          <RadialGradientBrush Center="0.05,0.7" GradientOrigin="0.05,0.7" RadiusX="0.62" RadiusY="0.88">
+            <GradientStop Color="#42FFFFFF" Offset="0"/>
+            <GradientStop Color="#1AFFFFFF" Offset="0.44"/>
+            <GradientStop Color="#00FFFFFF" Offset="1"/>
+          </RadialGradientBrush>
+        </Border.Background>
+      </Border>
+      <Path Grid.RowSpan="5" Margin="-20" Stretch="Fill" IsHitTestVisible="False"
+            Data="M 0,420 C 100,300 190,300 290,105 C 370,-10 510,36 625,245"
+            Stroke="#80FFFFFF" StrokeThickness="12" Opacity="0.12"/>
+      <Path Grid.RowSpan="5" Margin="-20" Stretch="Fill" IsHitTestVisible="False"
+            Data="M 0,420 C 100,300 190,300 290,105 C 370,-10 510,36 625,245"
+            Stroke="#C8FFFFFF" StrokeThickness="2.2" Opacity="0.34"/>
       <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False">
         <Border.Background>
           <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
@@ -249,8 +287,8 @@ $xaml = @'
       <Grid Name="TitleBar" Margin="0,0,0,11">
         <Border Name="DragArea" Background="Transparent" Margin="0,0,190,0" Cursor="SizeAll"/>
         <StackPanel IsHitTestVisible="False">
-          <TextBlock Text="C O D E X   M O N I T O R" FontSize="9" FontWeight="SemiBold" Foreground="#7C8291"/>
-          <TextBlock Text="&#x4EFB;&#x52A1;&#x4E0E;&#x4F7F;&#x7528;&#x91CF;" FontSize="21" FontWeight="SemiBold"
+          <TextBlock Name="EyebrowText" Text="C O D E X   M O N I T O R" FontSize="9" FontWeight="SemiBold" Foreground="#7C8291"/>
+          <TextBlock Name="MainTitleText" Text="&#x4EFB;&#x52A1;&#x4E0E;&#x4F7F;&#x7528;&#x91CF;" FontSize="21" FontWeight="SemiBold"
                      Foreground="#20232A" Margin="0,1,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -290,7 +328,7 @@ $xaml = @'
       </Grid>
 
       <DockPanel Grid.Row="1" Margin="2,0,2,6">
-        <TextBlock Text="&#x6B63;&#x5728;&#x8C03;&#x7528;&#x7684;&#x4EFB;&#x52A1;" FontSize="14.5" FontWeight="SemiBold" Foreground="#30333B"/>
+        <TextBlock Name="ActiveHeading" Text="&#x6B63;&#x5728;&#x8C03;&#x7528;&#x7684;&#x4EFB;&#x52A1;" FontSize="14.5" FontWeight="SemiBold" Foreground="#30333B"/>
         <TextBlock Name="StatusText" DockPanel.Dock="Right" HorizontalAlignment="Right"
                    Foreground="#858B98" FontSize="12.5" VerticalAlignment="Center"/>
       </DockPanel>
@@ -319,7 +357,7 @@ $xaml = @'
                    ItemContainerStyle="{StaticResource TaskItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Border Background="#24FFFFFF" BorderBrush="#52FFFFFF" BorderThickness="1"
+                <Border Background="{DynamicResource TaskRowBackground}" BorderBrush="{DynamicResource TaskRowBorder}" BorderThickness="1"
                         CornerRadius="13" Margin="2" Padding="10,7">
                 <Grid>
                   <Grid.ColumnDefinitions>
@@ -327,14 +365,14 @@ $xaml = @'
                     <ColumnDefinition Width="Auto"/>
                   </Grid.ColumnDefinitions>
                   <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                             FontSize="13.5" Foreground="#252529" Margin="0,0,12,0" ToolTip="{Binding Title}"/>
-                  <Border Grid.Column="1" Background="#CAE7E9F4" BorderBrush="#62FFFFFF" BorderThickness="1"
+                             FontSize="13.5" Foreground="{DynamicResource TaskRowText}" Margin="0,0,12,0" ToolTip="{Binding Title}"/>
+                  <Border Grid.Column="1" Background="{DynamicResource TaskChipBackground}" BorderBrush="#62FFFFFF" BorderThickness="1"
                           CornerRadius="12" Padding="10,5" ToolTip="{Binding DetailToolTip}">
                     <StackPanel Orientation="Horizontal">
-                      <TextBlock Text="{Binding FastPrefix}" FontSize="12" Foreground="#252529"/>
-                      <TextBlock Text="{Binding ModelLabel}" FontSize="12" Foreground="#252529"/>
+                      <TextBlock Text="{Binding FastPrefix}" FontSize="12" Foreground="{DynamicResource TaskChipText}"/>
+                      <TextBlock Text="{Binding ModelLabel}" FontSize="12" Foreground="{DynamicResource TaskChipText}"/>
                       <TextBlock Text="{Binding EffortText}" FontSize="12" Foreground="#8B5CF6"/>
-                      <TextBlock Text="{Binding SpeedText}" FontSize="12" Foreground="#6E6E74"/>
+                      <TextBlock Text="{Binding SpeedText}" FontSize="12" Foreground="{DynamicResource TaskChipText}"/>
                     </StackPanel>
                   </Border>
                 </Grid>
@@ -346,7 +384,7 @@ $xaml = @'
       </Border>
 
       <Grid Grid.Row="3" Margin="2,0,2,6">
-        <TextBlock Text="&#x4F7F;&#x7528;&#x91CF;&#x6982;&#x89C8;" FontSize="15.5" FontWeight="SemiBold" Foreground="#272A31"/>
+        <TextBlock Name="UsageHeading" Text="&#x4F7F;&#x7528;&#x91CF;&#x6982;&#x89C8;" FontSize="15.5" FontWeight="SemiBold" Foreground="#272A31"/>
         <TextBlock Name="UpdatedText" HorizontalAlignment="Right" VerticalAlignment="Center"
                    Foreground="#969BA7" FontSize="10"/>
       </Grid>
@@ -515,6 +553,10 @@ $weekResetValue = $window.FindName('WeekResetValue')
 $weekResetSub = $window.FindName('WeekResetSub')
 $weekResetCaption = $window.FindName('WeekResetCaption')
 $updatedText = $window.FindName('UpdatedText')
+$eyebrowText = $window.FindName('EyebrowText')
+$mainTitleText = $window.FindName('MainTitleText')
+$activeHeading = $window.FindName('ActiveHeading')
+$usageHeading = $window.FindName('UsageHeading')
 $closeButton = $window.FindName('CloseButton')
 $minimizeButton = $window.FindName('MinimizeButton')
 $pinButton = $window.FindName('PinButton')
@@ -564,15 +606,25 @@ function Update-GlassOptics([double]$X, [double]$Y) {
 }
 
 $script:themes = @(
-    [pscustomobject]@{ Name = U '\u73bb\u7483\u7070'; Colors = @('#78F9FCFE', '#56DDEBF2', '#68FFFFFF'); CardTop = '#66FFFFFF'; CardBottom = '#2EDCEBF2'; Border = '#B5FFFFFF' },
-    [pscustomobject]@{ Name = U '\u96fe\u7d2b'; Colors = @('#78FCFAFF', '#56DED5F3', '#68FFF9FF'); CardTop = '#66FFFFFF'; CardBottom = '#2EE8DFF8'; Border = '#B5FFFFFF' },
-    [pscustomobject]@{ Name = U '\u6d77\u76d0\u84dd\u7eff'; Colors = @('#78F4FCFF', '#56CFEDE8', '#68F7FFFC'); CardTop = '#66FFFFFF'; CardBottom = '#2ED6F2EC'; Border = '#B5FFFFFF' },
-    [pscustomobject]@{ Name = U '\u67d4\u7c89'; Colors = @('#78FFF7FA', '#56EBCFD9', '#68FFFDFC'); CardTop = '#66FFFFFF'; CardBottom = '#2EF4DEE7'; Border = '#B5FFFFFF' }
+    [pscustomobject]@{ Name = U '\u6e05\u900f\u65e0\u8272\u73bb\u7483'; IsDark = $false; Colors = @('#48FFFFFF', '#2EEEF3F7', '#42FFFFFF'); CardTop = '#58FFFFFF'; CardBottom = '#28FFFFFF'; Border = '#BFFFFFFF' },
+    [pscustomobject]@{ Name = U '\u73bb\u7483\u7070'; IsDark = $false; Colors = @('#78F9FCFE', '#56DDEBF2', '#68FFFFFF'); CardTop = '#66FFFFFF'; CardBottom = '#2EDCEBF2'; Border = '#B5FFFFFF' },
+    [pscustomobject]@{ Name = U '\u96fe\u7d2b'; IsDark = $false; Colors = @('#78FCFAFF', '#56DED5F3', '#68FFF9FF'); CardTop = '#66FFFFFF'; CardBottom = '#2EE8DFF8'; Border = '#B5FFFFFF' },
+    [pscustomobject]@{ Name = U '\u6d77\u76d0\u84dd\u7eff'; IsDark = $false; Colors = @('#78F4FCFF', '#56CFEDE8', '#68F7FFFC'); CardTop = '#66FFFFFF'; CardBottom = '#2ED6F2EC'; Border = '#B5FFFFFF' },
+    [pscustomobject]@{ Name = U '\u67d4\u7c89'; IsDark = $false; Colors = @('#78FFF7FA', '#56EBCFD9', '#68FFFDFC'); CardTop = '#66FFFFFF'; CardBottom = '#2EF4DEE7'; Border = '#B5FFFFFF' }
 )
 $script:themeIndex = 0
 
 function New-ColorBrush([string]$Color) {
     [Windows.Media.SolidColorBrush]::new([Windows.Media.ColorConverter]::ConvertFromString($Color))
+}
+
+function Get-VisualChildren([Windows.DependencyObject]$Parent) {
+    $count = [Windows.Media.VisualTreeHelper]::GetChildrenCount($Parent)
+    for ($i = 0; $i -lt $count; $i++) {
+        $child = [Windows.Media.VisualTreeHelper]::GetChild($Parent, $i)
+        $child
+        Get-VisualChildren $child
+    }
 }
 
 function Set-Theme([int]$Index) {
@@ -597,11 +649,41 @@ function Set-Theme([int]$Index) {
     [void]$cardBrush.GradientStops.Add([Windows.Media.GradientStop]::new(
         [Windows.Media.ColorConverter]::ConvertFromString($theme.CardBottom), 1))
     $borderBrush = New-ColorBrush $theme.Border
-    foreach ($card in @($taskCard)) {
+    foreach ($card in @($taskCard, $usageCard)) {
         if ($card) {
             $card.Background = $cardBrush
             $card.BorderBrush = $borderBrush
         }
+    }
+    $primary = if ($theme.IsDark) { '#F4F9FF' } else { '#272A31' }
+    $muted = if ($theme.IsDark) { '#C5D4E0' } else { '#858B98' }
+    $eyebrowText.Foreground = New-ColorBrush $muted
+    $mainTitleText.Foreground = New-ColorBrush $primary
+    $activeHeading.Foreground = New-ColorBrush $primary
+    $usageHeading.Foreground = New-ColorBrush $primary
+    $statusText.Foreground = New-ColorBrush $muted
+    $updatedText.Foreground = New-ColorBrush $muted
+    foreach ($textBlock in @(Get-VisualChildren $usageCard | Where-Object { $_ -is [Windows.Controls.TextBlock] })) {
+        if ($textBlock.FontSize -ge 12) {
+            $textBlock.Foreground = New-ColorBrush $primary
+        }
+        else {
+            $textBlock.Foreground = New-ColorBrush $muted
+        }
+    }
+    if ($theme.IsDark) {
+        $window.Resources['TaskRowBackground'] = New-ColorBrush '#50152231'
+        $window.Resources['TaskRowBorder'] = New-ColorBrush '#88BDEBFF'
+        $window.Resources['TaskRowText'] = New-ColorBrush '#F0F8FF'
+        $window.Resources['TaskChipBackground'] = New-ColorBrush '#5865798A'
+        $window.Resources['TaskChipText'] = New-ColorBrush '#F5FAFF'
+    }
+    else {
+        $window.Resources['TaskRowBackground'] = New-ColorBrush '#24FFFFFF'
+        $window.Resources['TaskRowBorder'] = New-ColorBrush '#52FFFFFF'
+        $window.Resources['TaskRowText'] = New-ColorBrush '#252529'
+        $window.Resources['TaskChipBackground'] = New-ColorBrush '#CAE7E9F4'
+        $window.Resources['TaskChipText'] = New-ColorBrush '#252529'
     }
     $themeButton.Background = New-ColorBrush '#70FFFFFF'
     $themeButton.ToolTip = ((U '\u914d\u8272\uff1a{0}\uff08\u70b9\u51fb\u5207\u6362\uff09  \u00b7  Liquid Glass IOR {1:0.00}') -f $theme.Name, $script:glassIOR)
