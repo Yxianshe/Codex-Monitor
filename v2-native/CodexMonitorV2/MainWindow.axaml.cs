@@ -120,7 +120,10 @@ public sealed partial class MainWindow : Window
 
         Uri uri = new($"avares://CodexMonitorV2/Assets/{(isDay ? "sun" : "moon")}.png");
         Bitmap next = new(AssetLoader.Open(uri));
-        this.FindControl<Image>("BackdropImage")!.Source = next;
+        Image backdrop = this.FindControl<Image>("BackdropImage")!;
+        backdrop.Source = next;
+        backdrop.RenderTransformOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative);
+        backdrop.RenderTransform = new ScaleTransform(isDay ? 1.06 : 1.75, 1.02);
         Bitmap? old = _sceneBitmap;
         _sceneBitmap = next;
         _sceneIsDay = isDay;

@@ -50,11 +50,7 @@
     <Border Margin="0" CornerRadius="10" ClipToBounds="True"
             BorderThickness="0">
       <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
-             RenderTransformOrigin="0.5,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
-        <Image.RenderTransform>
-          <ScaleTransform ScaleX="1.06" ScaleY="1.02"/>
-        </Image.RenderTransform>
-      </Image>
+             RenderOptions.BitmapInterpolationMode="HighQuality"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
