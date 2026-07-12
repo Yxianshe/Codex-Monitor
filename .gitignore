@@ -3,4 +3,6 @@ theme.txt
 *.tmp
 *.log
 /CodexTaskMonitor.exe
+/*-preview*.exe
+/assets/v2-liquid-glass-preview.png
 /dist/

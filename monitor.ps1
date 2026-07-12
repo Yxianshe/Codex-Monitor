@@ -66,7 +66,7 @@ public static class NativeBackdrop {
             ACCENT_POLICY policy = new ACCENT_POLICY {
                 AccentState = 4, // ACCENT_ENABLE_ACRYLICBLURBEHIND
                 AccentFlags = 2,
-                GradientColor = unchecked((int)0x33FFFFFF),
+                GradientColor = unchecked((int)0x20FFFFFF),
                 AnimationId = 0
             };
             int size = Marshal.SizeOf(typeof(ACCENT_POLICY));
@@ -158,14 +158,14 @@ $xaml = @'
       <Setter Property="Focusable" Value="False"/>
     </Style>
     <Style x:Key="GlassCard" TargetType="Border">
-      <Setter Property="Background" Value="#78FFFFFF"/>
-      <Setter Property="BorderBrush" Value="#90FFFFFF"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="18"/>
+      <Setter Property="Background" Value="#66FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#B5FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1.2"/>
+      <Setter Property="CornerRadius" Value="20"/>
       <Setter Property="Padding" Value="14"/>
       <Setter Property="Effect">
         <Setter.Value>
-          <DropShadowEffect Color="#546474" BlurRadius="16" ShadowDepth="3" Opacity="0.16"/>
+          <DropShadowEffect Color="#385467" BlurRadius="22" ShadowDepth="4" Opacity="0.18"/>
         </Setter.Value>
       </Setter>
     </Style>
@@ -210,13 +210,29 @@ $xaml = @'
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
-      <Border Grid.RowSpan="5" Margin="-14" CornerRadius="20" BorderThickness="1,1,1,0"
-              BorderBrush="#8AFFFFFF" Background="Transparent" IsHitTestVisible="False"/>
-      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.34">
+      <Border Name="GlassRim" Grid.RowSpan="5" Margin="-14" CornerRadius="20" BorderThickness="1.4"
+              Background="Transparent" IsHitTestVisible="False">
+        <Border.BorderBrush>
+          <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F4FFFFFF" Offset="0"/>
+            <GradientStop Color="#82E8F7FF" Offset="0.28"/>
+            <GradientStop Color="#38FFFFFF" Offset="0.58"/>
+            <GradientStop Color="#A8FFF0F8" Offset="1"/>
+          </LinearGradientBrush>
+        </Border.BorderBrush>
+      </Border>
+      <Border Name="SpectralBlue" Grid.RowSpan="5" Margin="-12.4,-13.4,-13.6,-12.6" CornerRadius="19"
+              BorderThickness="0.8" BorderBrush="#7C8BD9FF" Background="Transparent"
+              IsHitTestVisible="False"/>
+      <Border Name="SpectralRose" Grid.RowSpan="5" Margin="-13.6,-12.6,-12.4,-13.4" CornerRadius="19"
+              BorderThickness="0.8" BorderBrush="#68FF9FCB" Background="Transparent"
+              IsHitTestVisible="False"/>
+      <Border Name="LiquidHighlight" Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.48">
         <Border.Background>
-          <RadialGradientBrush Center="0.08,0.02" GradientOrigin="0.08,0.02" RadiusX="0.9" RadiusY="0.75">
-            <GradientStop Color="#D8FFFFFF" Offset="0"/>
-            <GradientStop Color="#54FFFFFF" Offset="0.42"/>
+          <RadialGradientBrush Center="0.13,0.06" GradientOrigin="0.13,0.06" RadiusX="0.72" RadiusY="0.68">
+            <GradientStop Color="#F2FFFFFF" Offset="0"/>
+            <GradientStop Color="#64FFFFFF" Offset="0.3"/>
+            <GradientStop Color="#16D9F5FF" Offset="0.66"/>
             <GradientStop Color="#00FFFFFF" Offset="1"/>
           </RadialGradientBrush>
         </Border.Background>
@@ -224,8 +240,9 @@ $xaml = @'
       <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False">
         <Border.Background>
           <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#00000000" Offset="0.58"/>
-            <GradientStop Color="#16394A5A" Offset="1"/>
+            <GradientStop Color="#00000000" Offset="0.5"/>
+            <GradientStop Color="#12364B5D" Offset="0.82"/>
+            <GradientStop Color="#244B6375" Offset="1"/>
           </LinearGradientBrush>
         </Border.Background>
       </Border>
@@ -276,33 +293,53 @@ $xaml = @'
       </DockPanel>
 
       <Border Name="TaskCard" Grid.Row="2" Style="{StaticResource GlassCard}" Margin="0,0,0,10" Padding="4" MinHeight="88">
-        <ListBox Name="TaskGrid" Background="Transparent" BorderThickness="0" Foreground="#202124"
-                 ItemContainerStyle="{StaticResource TaskItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-          <ListBox.ItemTemplate>
-            <DataTemplate>
-              <Border Background="#2EFFFFFF" BorderBrush="#42FFFFFF" BorderThickness="1"
-                      CornerRadius="12" Margin="2" Padding="10,7">
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*"/>
-                  <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                           FontSize="13.5" Foreground="#252529" Margin="0,0,12,0" ToolTip="{Binding Title}"/>
-                <Border Grid.Column="1" Background="#E7E9F4" CornerRadius="11" Padding="10,5"
-                        ToolTip="{Binding DetailToolTip}">
-                  <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding FastPrefix}" FontSize="12" Foreground="#252529"/>
-                    <TextBlock Text="{Binding ModelLabel}" FontSize="12" Foreground="#252529"/>
-                    <TextBlock Text="{Binding EffortText}" FontSize="12" Foreground="#8B5CF6"/>
-                    <TextBlock Text="{Binding SpeedText}" FontSize="12" Foreground="#6E6E74"/>
-                  </StackPanel>
+        <Grid>
+          <Border Margin="1" CornerRadius="17" BorderThickness="1" IsHitTestVisible="False">
+            <Border.BorderBrush>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#CAFFFFFF" Offset="0"/>
+                <GradientStop Color="#28FFFFFF" Offset="0.52"/>
+                <GradientStop Color="#82DDF8F0" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.BorderBrush>
+          </Border>
+          <Border Margin="3" CornerRadius="15" IsHitTestVisible="False" Opacity="0.46">
+            <Border.Background>
+              <RadialGradientBrush Center="0.12,0.05" GradientOrigin="0.12,0.05" RadiusX="0.82" RadiusY="0.9">
+                <GradientStop Color="#B8FFFFFF" Offset="0"/>
+                <GradientStop Color="#24FFFFFF" Offset="0.5"/>
+                <GradientStop Color="#00FFFFFF" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
+          <ListBox Name="TaskGrid" Background="Transparent" BorderThickness="0" Foreground="#202124"
+                   ItemContainerStyle="{StaticResource TaskItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#24FFFFFF" BorderBrush="#52FFFFFF" BorderThickness="1"
+                        CornerRadius="13" Margin="2" Padding="10,7">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                             FontSize="13.5" Foreground="#252529" Margin="0,0,12,0" ToolTip="{Binding Title}"/>
+                  <Border Grid.Column="1" Background="#CAE7E9F4" BorderBrush="#62FFFFFF" BorderThickness="1"
+                          CornerRadius="12" Padding="10,5" ToolTip="{Binding DetailToolTip}">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding FastPrefix}" FontSize="12" Foreground="#252529"/>
+                      <TextBlock Text="{Binding ModelLabel}" FontSize="12" Foreground="#252529"/>
+                      <TextBlock Text="{Binding EffortText}" FontSize="12" Foreground="#8B5CF6"/>
+                      <TextBlock Text="{Binding SpeedText}" FontSize="12" Foreground="#6E6E74"/>
+                    </StackPanel>
+                  </Border>
+                </Grid>
                 </Border>
-              </Grid>
-              </Border>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
       </Border>
 
       <Grid Grid.Row="3" Margin="2,0,2,6">
@@ -328,6 +365,26 @@ $xaml = @'
             <RowDefinition Height="1"/>
             <RowDefinition Height="72"/>
           </Grid.RowDefinitions>
+
+          <Border Grid.RowSpan="3" Margin="-5,-2" CornerRadius="12" BorderThickness="1"
+                  IsHitTestVisible="False" Opacity="0.72">
+            <Border.BorderBrush>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#D8FFFFFF" Offset="0"/>
+                <GradientStop Color="#2AFFFFFF" Offset="0.5"/>
+                <GradientStop Color="#80E6F6FF" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.BorderBrush>
+          </Border>
+          <Border Grid.RowSpan="3" Margin="-4,-1" CornerRadius="11" IsHitTestVisible="False" Opacity="0.32">
+            <Border.Background>
+              <RadialGradientBrush Center="0.08,0.02" GradientOrigin="0.08,0.02" RadiusX="0.78" RadiusY="0.86">
+                <GradientStop Color="#E2FFFFFF" Offset="0"/>
+                <GradientStop Color="#20FFFFFF" Offset="0.5"/>
+                <GradientStop Color="#00FFFFFF" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+          </Border>
 
           <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
@@ -461,12 +518,52 @@ $tokenButton = $window.FindName('TokenButton')
 $themeButton = $window.FindName('ThemeButton')
 $titleBar = $window.FindName('TitleBar')
 $dragArea = $window.FindName('DragArea')
+$glassRim = $window.FindName('GlassRim')
+$liquidHighlight = $window.FindName('LiquidHighlight')
+$spectralBlue = $window.FindName('SpectralBlue')
+$spectralRose = $window.FindName('SpectralRose')
+
+# Optical constants for common crown glass. Fresnel F0 and the edge shift are
+# derived from the IOR rather than tuned as unrelated opacity values.
+$script:glassIOR = 1.52
+$script:fresnelF0 = [Math]::Pow(($script:glassIOR - 1.0) / ($script:glassIOR + 1.0), 2)
+$script:refractionShift = 1.0 - (1.0 / $script:glassIOR)
+
+function Apply-GlassPhysics {
+    $liquidHighlight.Opacity = [Math]::Min(0.62, 0.30 + ($script:refractionShift * 0.55))
+    $spectralBlue.Opacity = [Math]::Min(0.22, $script:fresnelF0 * 3.4)
+    $spectralRose.Opacity = [Math]::Min(0.18, $script:fresnelF0 * 2.8)
+
+    Update-GlassOptics 0.13 0.06
+}
+
+function Update-GlassOptics([double]$X, [double]$Y) {
+    $dx = ($X - 0.5) * 2.0
+    $dy = ($Y - 0.5) * 2.0
+    $radius = [Math]::Min(1.0, [Math]::Sqrt(($dx * $dx) + ($dy * $dy)))
+
+    # Schlick's approximation: reflected light increases toward grazing angles.
+    $cosTheta = [Math]::Max(0.08, 1.0 - ($radius * 0.92))
+    $fresnel = $script:fresnelF0 + ((1.0 - $script:fresnelF0) * [Math]::Pow(1.0 - $cosTheta, 5))
+    $glassRim.Opacity = [Math]::Min(0.82, 0.36 + ($fresnel * 0.46))
+
+    $highlightBrush = $liquidHighlight.Background -as [Windows.Media.RadialGradientBrush]
+    if ($highlightBrush) {
+        $center = [Windows.Point]::new(0.08 + ($X * 0.74), 0.04 + ($Y * 0.58))
+        $highlightBrush.Center = $center
+        $highlightBrush.GradientOrigin = $center
+    }
+
+    $edgeOffset = $script:refractionShift * (0.7 + ($radius * 1.8))
+    $spectralBlue.RenderTransform = [Windows.Media.TranslateTransform]::new(-$dx * $edgeOffset, -$dy * $edgeOffset)
+    $spectralRose.RenderTransform = [Windows.Media.TranslateTransform]::new($dx * $edgeOffset, $dy * $edgeOffset)
+}
 
 $script:themes = @(
-    [pscustomobject]@{ Name = U '\u73bb\u7483\u7070'; Colors = @('#88FBFCFD', '#72EAF3F8', '#80FFFFFF'); CardTop = '#78FFFFFF'; CardBottom = '#42EEF5F8'; Border = '#9AFFFFFF' },
-    [pscustomobject]@{ Name = U '\u96fe\u7d2b'; Colors = @('#88FCFAFF', '#72E8E2F7', '#80FFF9FF'); CardTop = '#78FFFFFF'; CardBottom = '#42F0EBFA'; Border = '#9AFFFFFF' },
-    [pscustomobject]@{ Name = U '\u6d77\u76d0\u84dd\u7eff'; Colors = @('#88F6FCFF', '#72DDF2EF', '#80FAFFFD'); CardTop = '#78FFFFFF'; CardBottom = '#42E5F6F3'; Border = '#9AFFFFFF' },
-    [pscustomobject]@{ Name = U '\u67d4\u7c89'; Colors = @('#88FFF9FB', '#72EFDCE4', '#80FFFDFC'); CardTop = '#78FFFFFF'; CardBottom = '#42F7E9EE'; Border = '#9AFFFFFF' }
+    [pscustomobject]@{ Name = U '\u73bb\u7483\u7070'; Colors = @('#78F9FCFE', '#56DDEBF2', '#68FFFFFF'); CardTop = '#66FFFFFF'; CardBottom = '#2EDCEBF2'; Border = '#B5FFFFFF' },
+    [pscustomobject]@{ Name = U '\u96fe\u7d2b'; Colors = @('#78FCFAFF', '#56DED5F3', '#68FFF9FF'); CardTop = '#66FFFFFF'; CardBottom = '#2EE8DFF8'; Border = '#B5FFFFFF' },
+    [pscustomobject]@{ Name = U '\u6d77\u76d0\u84dd\u7eff'; Colors = @('#78F4FCFF', '#56CFEDE8', '#68F7FFFC'); CardTop = '#66FFFFFF'; CardBottom = '#2ED6F2EC'; Border = '#B5FFFFFF' },
+    [pscustomobject]@{ Name = U '\u67d4\u7c89'; Colors = @('#78FFF7FA', '#56EBCFD9', '#68FFFDFC'); CardTop = '#66FFFFFF'; CardBottom = '#2EF4DEE7'; Border = '#B5FFFFFF' }
 )
 $script:themeIndex = 0
 
@@ -503,9 +600,10 @@ function Set-Theme([int]$Index) {
         }
     }
     $themeButton.Background = New-ColorBrush '#70FFFFFF'
-    $themeButton.ToolTip = ((U '\u914d\u8272\uff1a{0}\uff08\u70b9\u51fb\u5207\u6362\uff09') -f $theme.Name)
+    $themeButton.ToolTip = ((U '\u914d\u8272\uff1a{0}\uff08\u70b9\u51fb\u5207\u6362\uff09  \u00b7  Liquid Glass IOR {1:0.00}') -f $theme.Name, $script:glassIOR)
 }
 
+Apply-GlassPhysics
 Set-Theme $script:themeIndex
 
 $script:taskTitleIndexStamp = ''
@@ -965,6 +1063,18 @@ $tokenButton.Add_Click({
 })
 $themeButton.Add_Click({
     Set-Theme ($script:themeIndex + 1)
+})
+$rootShell.Add_MouseMove({
+    param($sender, $eventArgs)
+    if ($rootShell.ActualWidth -le 0 -or $rootShell.ActualHeight -le 0) { return }
+
+    $position = $eventArgs.GetPosition($rootShell)
+    $x = [Math]::Max(0.04, [Math]::Min(0.96, $position.X / $rootShell.ActualWidth))
+    $y = [Math]::Max(0.03, [Math]::Min(0.94, $position.Y / $rootShell.ActualHeight))
+    Update-GlassOptics $x $y
+})
+$rootShell.Add_MouseLeave({
+    Update-GlassOptics 0.13 0.06
 })
 $pinButton.Add_Click({
     $window.Topmost = -not $window.Topmost
