@@ -9,6 +9,9 @@
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None" CanResize="True"
         Background="#081322"
+        TextOptions.TextRenderingMode="SubpixelAntialias"
+        TextOptions.TextHintingMode="Strong"
+        TextOptions.BaselinePixelAlignment="Aligned"
         ExtendClientAreaToDecorationsHint="True">
   <Window.Styles>
     <Style Selector="Button.top">
@@ -49,7 +52,7 @@
       <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
              RenderTransformOrigin="0,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
         <Image.RenderTransform>
-          <ScaleTransform ScaleX="1.12" ScaleY="1"/>
+          <ScaleTransform ScaleX="1.08" ScaleY="1"/>
         </Image.RenderTransform>
       </Image>
     </Border>
@@ -62,13 +65,13 @@
                               RefractionAmount="28"
                               DepthEffect="True"
                               ChromaticAberration="False"
-                              BlurRadius="1.8"
-                              Vibrancy="1.10"
-                              Brightness="0.03"
-                              Contrast="1.08"
+                              BlurRadius="0.35"
+                              Vibrancy="1.22"
+                              Brightness="0.02"
+                              Contrast="1.16"
                               BackdropOpacity="1"
                               TintColor="#00000000"
-                              SurfaceColor="#06FFFFFF"
+                              SurfaceColor="#03FFFFFF"
                               HighlightEnabled="True"
                               HighlightWidth="0.8"
                               HighlightBlurRadius="1.4"
@@ -76,7 +79,7 @@
                               HighlightAngle="55"
                               HighlightFalloff="1.6"
                               ShadowEnabled="False"/>
-    <Border Margin="16" Background="#08030910" CornerRadius="20">
+    <Border Margin="16" Background="#12030910" CornerRadius="20">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
         <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto" Background="#01000000">
           <StackPanel Spacing="1">
@@ -109,19 +112,19 @@
 
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="2,0">
           <TextBlock Text="正在调用的任务" FontSize="14.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-          <TextBlock x:Name="StatusText" Grid.Column="1" FontSize="12" Foreground="#D0FFFFFF"/>
+          <TextBlock x:Name="StatusText" Grid.Column="1" FontSize="12" Foreground="#EAFFFFFF"/>
         </Grid>
 
-        <glass:LiquidGlassSurface x:Name="TaskCard" Grid.Row="2" Padding="7" MinHeight="92"
+        <glass:LiquidGlassSurface x:Name="TaskCard" Grid.Row="2" MinHeight="92"
                                   CornerRadius="18" RefractionHeight="11" RefractionAmount="16"
-                                  DepthEffect="True" ChromaticAberration="True" BlurRadius="2.4"
-                                  Vibrancy="1.08" Brightness="0.035" Contrast="1.05"
+                                  DepthEffect="True" ChromaticAberration="True" BlurRadius="1.15"
+                                  Vibrancy="1.12" Brightness="0.025" Contrast="1.08"
                                   BackdropOpacity="0.94" SurfaceColor="#16030A14"
                                   HighlightWidth="0.75" HighlightBlurRadius="1.0"
                                   HighlightOpacity="0.30" HighlightAngle="55" HighlightFalloff="1.8"
                                   ShadowEnabled="True" ShadowRadius="18" ShadowOffset="0,4"
                                   ShadowColor="#42000000">
-          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ScrollViewer Margin="14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Tasks}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -132,7 +135,7 @@
                                  FontSize="13.5" Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,12,0"/>
                       <Border Grid.Column="1" Background="#20FFFFFF" BorderBrush="#52FFFFFF"
                               BorderThickness="1" CornerRadius="12" Padding="9,4">
-                        <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="#E8FFFFFF"/>
+                        <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="#F4FFFFFF"/>
                       </Border>
                     </Grid>
                   </Border>
@@ -147,16 +150,16 @@
           <TextBlock x:Name="UpdatedText" Grid.Column="1" FontSize="10" Foreground="#CCFFFFFF" VerticalAlignment="Center"/>
         </Grid>
 
-        <glass:LiquidGlassSurface x:Name="UsageCard" Grid.Row="4" Padding="10,6"
+        <glass:LiquidGlassSurface x:Name="UsageCard" Grid.Row="4"
                                   CornerRadius="18" RefractionHeight="11" RefractionAmount="16"
-                                  DepthEffect="True" ChromaticAberration="True" BlurRadius="2.4"
-                                  Vibrancy="1.08" Brightness="0.035" Contrast="1.05"
+                                  DepthEffect="True" ChromaticAberration="True" BlurRadius="1.15"
+                                  Vibrancy="1.12" Brightness="0.025" Contrast="1.08"
                                   BackdropOpacity="0.94" SurfaceColor="#16030A14"
                                   HighlightWidth="0.75" HighlightBlurRadius="1.0"
                                   HighlightOpacity="0.30" HighlightAngle="55" HighlightFalloff="1.8"
                                   ShadowEnabled="True" ShadowRadius="18" ShadowOffset="0,4"
                                   ShadowColor="#42000000">
-          <Grid RowDefinitions="72,1,72">
+          <Grid Margin="20,10" RowDefinitions="64,1,64">
             <Grid ColumnDefinitions="72,*,1,145">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
                 <TextBlock Text="5 小时" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
@@ -164,7 +167,7 @@
               </StackPanel>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                  <TextBlock Text="剩余额度" FontSize="12" Foreground="#D8FFFFFF"/>
+                  <TextBlock Text="剩余额度" FontSize="12" Foreground="#F0FFFFFF"/>
                   <TextBlock x:Name="FiveQuotaValue" Grid.Column="1" Text="--%" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <ProgressBar x:Name="FiveQuotaBar" Maximum="100" Value="0" Foreground="#64A8FF"/>
@@ -193,7 +196,7 @@
               </StackPanel>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                  <TextBlock Text="剩余额度" FontSize="12" Foreground="#D8FFFFFF"/>
+                  <TextBlock Text="剩余额度" FontSize="12" Foreground="#F0FFFFFF"/>
                   <TextBlock x:Name="WeekQuotaValue" Grid.Column="1" Text="--%" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <ProgressBar x:Name="WeekQuotaBar" Maximum="100" Value="0" Foreground="#58C7A7"/>
