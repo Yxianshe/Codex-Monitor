@@ -281,6 +281,9 @@ $xaml = @'
                     Data="M 5,2 L 11,2 L 10,6 L 12,8 L 9,8 L 8,14 L 7,8 L 4,8 L 6,6 Z"/>
             </Viewbox>
           </Button>
+          <Button Name="MinimizeButton" Content="&#x2212;" Width="34" Height="34" Margin="6,0,0,0"
+                  Style="{StaticResource CircleButton}" Background="#78FFFFFF" Foreground="#58677C"
+                  FontSize="18" FontWeight="SemiBold" ToolTip="&#x6700;&#x5C0F;&#x5316;"/>
           <Button Name="CloseButton" Content="&#x00D7;" Width="34" Height="34" Margin="6,0,0,0"
                   Style="{StaticResource CircleButton}" Background="#78F9EEEE" Foreground="#925F66" FontSize="20"/>
         </StackPanel>
@@ -513,6 +516,7 @@ $weekResetSub = $window.FindName('WeekResetSub')
 $weekResetCaption = $window.FindName('WeekResetCaption')
 $updatedText = $window.FindName('UpdatedText')
 $closeButton = $window.FindName('CloseButton')
+$minimizeButton = $window.FindName('MinimizeButton')
 $pinButton = $window.FindName('PinButton')
 $tokenButton = $window.FindName('TokenButton')
 $themeButton = $window.FindName('ThemeButton')
@@ -1056,6 +1060,7 @@ $window.Add_Closed({
     }
 })
 $closeButton.Add_Click({ $window.Close() })
+$minimizeButton.Add_Click({ $window.WindowState = [Windows.WindowState]::Minimized })
 $tokenButton.Add_Click({
     $script:showTaskTokens = -not $script:showTaskTokens
     Update-TokenButtonAppearance
