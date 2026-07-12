@@ -518,7 +518,7 @@ public sealed class ModelChoice
         IsDefault = isDefault;
         Accent = new SolidColorBrush(ModelAccent(id));
         Color color = ModelAccent(id);
-        Background = new SolidColorBrush(Color.FromArgb(54, color.R, color.G, color.B));
+        Background = new SolidColorBrush(Color.FromArgb(76, color.R, color.G, color.B));
     }
 
     public string Id { get; }
@@ -578,7 +578,7 @@ public sealed class EffortChoice
         Id = id;
         DisplayName = displayName;
         Accent = new SolidColorBrush(accent);
-        Background = new SolidColorBrush(Color.FromArgb(58, accent.R, accent.G, accent.B));
+        Background = new SolidColorBrush(Color.FromArgb(78, accent.R, accent.G, accent.B));
     }
 
     public string Id { get; }
