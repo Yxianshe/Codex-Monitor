@@ -83,6 +83,20 @@
     <Style Selector="ComboBox.taskChoice:pointerover">
       <Setter Property="BorderBrush" Value="#B8FFFFFF"/>
     </Style>
+    <Style Selector="ComboBoxItem">
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="9,5"/>
+      <Setter Property="Background" Value="#F4F6F8FC"/>
+      <Setter Property="Foreground" Value="#FF172033"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover">
+      <Setter Property="Background" Value="#FFE4EBF7"/>
+      <Setter Property="Foreground" Value="#FF101827"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+      <Setter Property="Background" Value="#FFD7E4F8"/>
+      <Setter Property="Foreground" Value="#FF101827"/>
+    </Style>
   </Window.Styles>
 
   <Grid Background="Transparent">
@@ -124,7 +138,7 @@
         <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto" Background="#01000000">
           <StackPanel Spacing="1">
             <TextBlock Text="C O D E X   M O N I T O R" FontSize="9" FontWeight="SemiBold" Foreground="#D8FFFFFF"/>
-            <TextBlock Text="任务与使用量" FontSize="21" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+            <TextBlock x:Name="MainTitleText" Text="Tasks &amp; Usage" FontSize="21" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal">
             <Button x:Name="TokenButton" Classes="top" Width="64">
@@ -136,6 +150,10 @@
                 <Ellipse Width="7" Height="7" Fill="#9B8CFF" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2"/>
                 <Ellipse Width="7" Height="7" Fill="#58C7A7" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
               </Grid>
+            </Button>
+            <Button x:Name="LanguageButton" Classes="top" Width="40" Padding="0"
+                    ToolTip.Tip="Switch to Chinese">
+              <TextBlock x:Name="LanguageButtonText" Text="中" Foreground="#FFFFFFFF" FontWeight="SemiBold"/>
             </Button>
             <Button x:Name="PinButton" Classes="top" Width="34" Padding="0">
               <PathIcon Width="17" Height="17" Foreground="#FFFFFFFF"
@@ -151,28 +169,27 @@
         </Grid>
 
         <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="2,0">
-          <TextBlock Text="正在调用的任务" FontSize="14.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
+          <TextBlock x:Name="ActiveTasksLabel" Text="Active tasks" FontSize="14.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+          <StackPanel x:Name="DefaultSettingsPanel" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                       VerticalAlignment="Center" Spacing="4"
-                      ToolTip.Tip="设置 Codex 新任务默认值；运行中的任务只读显示，当前回合不能从外部热切换">
-            <TextBlock Text="默认" FontSize="10.5" Foreground="#CFFFFFFF" VerticalAlignment="Center"/>
-            <ComboBox x:Name="DefaultModelBox" Classes="taskChoice" Width="116" Margin="0">
+                      ToolTip.Tip="Set defaults for new Codex tasks; active turns remain unchanged">
+            <TextBlock x:Name="DefaultLabel" Text="New" FontSize="10.5" FontWeight="SemiBold" Foreground="#FFFFFFFF" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DefaultModelBox" Classes="taskChoice" Width="120" Margin="0">
               <ComboBox.ItemTemplate>
                 <DataTemplate>
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <Ellipse Width="7" Height="7" Fill="{Binding Accent}"/>
-                    <TextBlock Text="{Binding DisplayName}" Foreground="#FFFFFFFF"
-                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/>
                   </StackPanel>
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <ComboBox x:Name="DefaultEffortBox" Classes="taskChoice" Width="76" Margin="0">
+            <ComboBox x:Name="DefaultEffortBox" Classes="taskChoice" Width="108" Margin="0">
               <ComboBox.ItemTemplate>
                 <DataTemplate>
                   <StackPanel Orientation="Horizontal" Spacing="5">
                     <Ellipse Width="7" Height="7" Fill="{Binding Accent}"/>
-                    <TextBlock Text="{Binding DisplayName}" Foreground="#FFFFFFFF"/>
+                    <TextBlock Text="{Binding DisplayName}"/>
                   </StackPanel>
                 </DataTemplate>
               </ComboBox.ItemTemplate>
@@ -207,7 +224,7 @@
                               Background="#22FFFFFF" BorderThickness="0" CornerRadius="12" Padding="9,4">
                         <TextBlock Text="{Binding TokenDetail}" FontSize="11.5" Foreground="#F4FFFFFF"/>
                       </Border>
-                      <TextBlock Grid.Column="1" IsVisible="{Binding SettingsVisible}" Text="当前"
+                      <TextBlock Grid.Column="1" IsVisible="{Binding SettingsVisible}" Text="{Binding CurrentLabel}"
                                  FontSize="9.5" Foreground="#C8FFFFFF" VerticalAlignment="Center"/>
                       <Border Grid.Column="2" Width="112" Height="27"
                               IsVisible="{Binding SettingsVisible}" Background="{Binding ModelBackground}"
@@ -218,7 +235,7 @@
                                      TextTrimming="CharacterEllipsis" MaxWidth="78"/>
                         </StackPanel>
                       </Border>
-                      <Border Grid.Column="3" Width="72" Height="27"
+                      <Border Grid.Column="3" Width="84" Height="27"
                               IsVisible="{Binding SettingsVisible}" Background="{Binding EffortBackground}"
                               BorderBrush="#42FFFFFF" BorderThickness="1" CornerRadius="13" Padding="8,0">
                         <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
@@ -235,7 +252,7 @@
         </Grid>
 
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="2,0">
-          <TextBlock Text="使用量概览" FontSize="15.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+          <TextBlock x:Name="UsageTitleText" Text="Usage" FontSize="15.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
           <TextBlock x:Name="UpdatedText" Grid.Column="1" FontSize="10" Foreground="#CCFFFFFF" VerticalAlignment="Center"/>
         </Grid>
 
@@ -253,16 +270,16 @@
           <Grid Margin="20,10" RowDefinitions="64,1,64">
             <Grid ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
-                <TextBlock Text="5 小时" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                <TextBlock Text="限额周期" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                <TextBlock x:Name="FiveTitleText" Text="5 hours" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+                <TextBlock x:Name="FiveWindowText" Text="Limit window" FontSize="10.5" Foreground="#CCFFFFFF"/>
               </StackPanel>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                  <TextBlock Text="剩余额度" FontSize="12" Foreground="#F0FFFFFF"/>
+                  <TextBlock x:Name="FiveRemainingText" Text="Remaining" FontSize="12" Foreground="#F0FFFFFF"/>
                   <TextBlock x:Name="FiveQuotaValue" Grid.Column="1" Text="--%" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <ProgressBar x:Name="FiveQuotaBar" Maximum="100" Value="0" Foreground="#64A8FF"/>
-                <TextBlock x:Name="FiveQuotaCaption" Text="等待更新" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
+                <TextBlock x:Name="FiveQuotaCaption" Text="Waiting for update" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
               </StackPanel>
               <Border Grid.Column="2" Background="#38FFFFFF" Margin="0,10"/>
               <Border Grid.Column="3" Background="#14FFFFFF" BorderBrush="#3FFFFFFF"
@@ -273,8 +290,8 @@
                   <TextBlock x:Name="FiveResetValue" Text="--" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
-                  <TextBlock Text="重置" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                  <TextBlock Text="下次日期" FontSize="9.5" Foreground="#BFFFFFFF"/>
+                  <TextBlock x:Name="FiveResetTitleText" Text="Reset" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+                  <TextBlock x:Name="FiveNextDateText" Text="Next date" FontSize="9.5" Foreground="#BFFFFFFF"/>
                   <TextBlock x:Name="FiveResetCaption" Text="--" FontSize="10.5" Foreground="#CCFFFFFF"/>
                 </StackPanel>
                 </Grid>
@@ -285,16 +302,16 @@
 
             <Grid Grid.Row="2" ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
-                <TextBlock Text="每周" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                <TextBlock Text="限额周期" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                <TextBlock x:Name="WeekTitleText" Text="Weekly" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+                <TextBlock x:Name="WeekWindowText" Text="Limit window" FontSize="10.5" Foreground="#CCFFFFFF"/>
               </StackPanel>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                  <TextBlock Text="剩余额度" FontSize="12" Foreground="#F0FFFFFF"/>
+                  <TextBlock x:Name="WeekRemainingText" Text="Remaining" FontSize="12" Foreground="#F0FFFFFF"/>
                   <TextBlock x:Name="WeekQuotaValue" Grid.Column="1" Text="--%" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <ProgressBar x:Name="WeekQuotaBar" Maximum="100" Value="0" Foreground="#58C7A7"/>
-                <TextBlock x:Name="WeekQuotaCaption" Text="等待更新" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
+                <TextBlock x:Name="WeekQuotaCaption" Text="Waiting for update" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
               </StackPanel>
               <Border Grid.Column="2" Background="#38FFFFFF" Margin="0,10"/>
               <Border Grid.Column="3" Background="#14FFFFFF" BorderBrush="#3FFFFFFF"
@@ -305,8 +322,8 @@
                   <TextBlock x:Name="WeekResetValue" Text="--" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
-                  <TextBlock Text="重置" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                  <TextBlock Text="下次日期" FontSize="9.5" Foreground="#BFFFFFFF"/>
+                  <TextBlock x:Name="WeekResetTitleText" Text="Reset" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+                  <TextBlock x:Name="WeekNextDateText" Text="Next date" FontSize="9.5" Foreground="#BFFFFFFF"/>
                   <TextBlock x:Name="WeekResetCaption" Text="--" FontSize="10.5" Foreground="#CCFFFFFF"/>
                 </StackPanel>
                 </Grid>
@@ -318,7 +335,7 @@
       </Border>
 
     <Grid glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
-      <Border x:Name="MoveGrip" Width="300" Height="52" HorizontalAlignment="Left" VerticalAlignment="Top"
+      <Border x:Name="MoveGrip" Width="240" Height="52" HorizontalAlignment="Left" VerticalAlignment="Top"
               Background="#01000000" Margin="10,0,0,0"/>
       <Border x:Name="TopGrip" Height="10" VerticalAlignment="Top" Background="#01000000" Margin="18,0" Cursor="SizeNorthSouth"/>
       <Border x:Name="BottomGrip" Height="10" VerticalAlignment="Bottom" Background="#01000000" Margin="18,0" Cursor="SizeNorthSouth"/>

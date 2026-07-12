@@ -177,11 +177,11 @@ internal static class MonitorData
                     },
                     reloadUserConfig = true
                 });
-            return new SettingsUpdateResult(true, "新任务默认模型已保存");
+            return new SettingsUpdateResult(true, "");
         }
         catch (Exception error)
         {
-            return new SettingsUpdateResult(false, $"默认模型保存失败：{error.Message}");
+            return new SettingsUpdateResult(false, error.Message);
         }
         finally
         {
@@ -251,7 +251,7 @@ internal static class MonitorData
             "initialize",
             new
             {
-                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.1" },
+                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.2" },
                 capabilities
             });
         await WriteMessageAsync(process, new { jsonrpc = "2.0", method = "initialized", @params = new { } });
