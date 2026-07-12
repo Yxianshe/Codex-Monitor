@@ -51,7 +51,7 @@
   </Window.Styles>
 
   <Grid Background="#081322">
-    <Border Margin="2" CornerRadius="26" ClipToBounds="True"
+    <Border Margin="0" CornerRadius="10" ClipToBounds="True"
             BorderBrush="#A8FFFFFF" BorderThickness="1">
       <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
              RenderTransformOrigin="0,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
@@ -62,9 +62,9 @@
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
-                              Margin="2"
+                              Margin="0"
                               Opacity="1"
-                              CornerRadius="26"
+                              CornerRadius="10"
                               RefractionHeight="25"
                               RefractionAmount="36"
                               DepthEffect="True"
@@ -90,7 +90,9 @@
             <TextBlock Text="任务与使用量" FontSize="21" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal">
-            <Button x:Name="TokenButton" Classes="top" Content="Token" Width="64"/>
+            <Button x:Name="TokenButton" Classes="top" Width="64">
+              <TextBlock Text="Token" Foreground="#FFFFFFFF" FontWeight="SemiBold"/>
+            </Button>
             <Button x:Name="ThemeButton" Classes="top" Width="34" Padding="0">
               <Grid Width="18" Height="18">
                 <Ellipse Stroke="#DFFFFFFF" StrokeThickness="2"/>
