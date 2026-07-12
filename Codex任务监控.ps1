@@ -32,10 +32,8 @@ public static class NativeSingleInstance {
 
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
-Add-Type -AssemblyName System.Drawing
-Add-Type -ReferencedAssemblies 'System.Drawing.dll' @'
+Add-Type @'
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
 public static class NativeResize {
     [DllImport("user32.dll")] public static extern bool ReleaseCapture();
@@ -108,32 +106,6 @@ public static class NativeBackdrop {
     }
 }
 
-public static class NativeDesktopCapture {
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr handle);
-
-    public static Bitmap CaptureWindowArea(IntPtr hwnd) {
-        RECT rect;
-        if (!GetWindowRect(hwnd, out rect)) return null;
-        int width = Math.Max(1, rect.Right - rect.Left);
-        int height = Math.Max(1, rect.Bottom - rect.Top);
-        var bitmap = new Bitmap(width, height);
-        using (var graphics = Graphics.FromImage(bitmap)) {
-            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
-        }
-        return bitmap;
-    }
-
-    public static void ReleaseBitmap(IntPtr handle) {
-        if (handle != IntPtr.Zero) DeleteObject(handle);
-    }
-}
 '@
 
 [NativeIdentity]::Apply()
@@ -180,10 +152,10 @@ $xaml = @'
                         GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
-    <SolidColorBrush x:Key="TaskRowBackground" Color="#24FFFFFF"/>
-    <SolidColorBrush x:Key="TaskRowBorder" Color="#52FFFFFF"/>
+    <SolidColorBrush x:Key="TaskRowBackground" Color="#18FFFFFF"/>
+    <SolidColorBrush x:Key="TaskRowBorder" Color="#42FFFFFF"/>
     <SolidColorBrush x:Key="TaskRowText" Color="#252529"/>
-    <SolidColorBrush x:Key="TaskChipBackground" Color="#CAE7E9F4"/>
+    <SolidColorBrush x:Key="TaskChipBackground" Color="#78FFFFFF"/>
     <SolidColorBrush x:Key="TaskChipText" Color="#252529"/>
     <Style x:Key="FlatProgress" TargetType="ProgressBar">
       <Setter Property="Height" Value="8"/>
@@ -262,13 +234,6 @@ $xaml = @'
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
-      <!-- Startup desktop sample. Kept static so remote-desktop capture can still see this window. -->
-      <Image Name="DesktopBackdrop" Grid.RowSpan="5" Margin="-16" Stretch="Fill" Opacity="0.94"
-             IsHitTestVisible="False">
-        <Image.Effect>
-          <BlurEffect Radius="6" RenderingBias="Performance"/>
-        </Image.Effect>
-      </Image>
       <Border Name="GlassRim" Grid.RowSpan="5" Margin="-14" CornerRadius="20" BorderThickness="1.4"
               Background="Transparent" IsHitTestVisible="False">
         <Border.BorderBrush>
@@ -280,11 +245,11 @@ $xaml = @'
           </LinearGradientBrush>
         </Border.BorderBrush>
       </Border>
-      <Border Name="SpectralBlue" Grid.RowSpan="5" Margin="-12.4,-13.4,-13.6,-12.6" CornerRadius="19"
-              BorderThickness="0.8" BorderBrush="#8CFFFFFF" Background="Transparent"
+      <Border Name="SpectralBlue" Grid.RowSpan="5" Margin="-13" CornerRadius="19"
+              BorderThickness="0.65" BorderBrush="#3A86C8FF" Background="Transparent"
               IsHitTestVisible="False"/>
-      <Border Name="SpectralRose" Grid.RowSpan="5" Margin="-13.6,-12.6,-12.4,-13.4" CornerRadius="19"
-              BorderThickness="0.8" BorderBrush="#58FFFFFF" Background="Transparent"
+      <Border Name="SpectralRose" Grid.RowSpan="5" Margin="-13" CornerRadius="19"
+              BorderThickness="0.65" BorderBrush="#32FF9EBB" Background="Transparent"
               IsHitTestVisible="False"/>
       <Border Name="LiquidHighlight" Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.48">
         <Border.Background>
@@ -296,45 +261,12 @@ $xaml = @'
           </RadialGradientBrush>
         </Border.Background>
       </Border>
-      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.72">
-        <Border.Background>
-          <RadialGradientBrush Center="0.98,0.04" GradientOrigin="0.98,0.04" RadiusX="0.7" RadiusY="0.82">
-            <GradientStop Color="#56FFFFFF" Offset="0"/>
-            <GradientStop Color="#24FFFFFF" Offset="0.42"/>
-            <GradientStop Color="#00FFFFFF" Offset="1"/>
-          </RadialGradientBrush>
-        </Border.Background>
-      </Border>
-      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.58">
-        <Border.Background>
-          <RadialGradientBrush Center="0.92,1.02" GradientOrigin="0.92,1.02" RadiusX="0.76" RadiusY="0.78">
-            <GradientStop Color="#4CFFFFFF" Offset="0"/>
-            <GradientStop Color="#1EFFFFFF" Offset="0.42"/>
-            <GradientStop Color="#00FFFFFF" Offset="1"/>
-          </RadialGradientBrush>
-        </Border.Background>
-      </Border>
-      <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False" Opacity="0.56">
-        <Border.Background>
-          <RadialGradientBrush Center="0.05,0.7" GradientOrigin="0.05,0.7" RadiusX="0.62" RadiusY="0.88">
-            <GradientStop Color="#42FFFFFF" Offset="0"/>
-            <GradientStop Color="#1AFFFFFF" Offset="0.44"/>
-            <GradientStop Color="#00FFFFFF" Offset="1"/>
-          </RadialGradientBrush>
-        </Border.Background>
-      </Border>
-      <Path Grid.RowSpan="5" Margin="-20" Stretch="Fill" IsHitTestVisible="False"
-            Data="M 0,420 C 100,300 190,300 290,105 C 370,-10 510,36 625,245"
-            Stroke="#80FFFFFF" StrokeThickness="12" Opacity="0.12"/>
-      <Path Grid.RowSpan="5" Margin="-20" Stretch="Fill" IsHitTestVisible="False"
-            Data="M 0,420 C 100,300 190,300 290,105 C 370,-10 510,36 625,245"
-            Stroke="#C8FFFFFF" StrokeThickness="2.2" Opacity="0.34"/>
       <Border Grid.RowSpan="5" Margin="-13" CornerRadius="19" IsHitTestVisible="False">
         <Border.Background>
           <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
             <GradientStop Color="#00000000" Offset="0.5"/>
-            <GradientStop Color="#12364B5D" Offset="0.82"/>
-            <GradientStop Color="#244B6375" Offset="1"/>
+            <GradientStop Color="#0826313A" Offset="0.82"/>
+            <GradientStop Color="#1026313A" Offset="1"/>
           </LinearGradientBrush>
         </Border.Background>
       </Border>
@@ -619,37 +551,9 @@ $themeButton = $window.FindName('ThemeButton')
 $titleBar = $window.FindName('TitleBar')
 $dragArea = $window.FindName('DragArea')
 $glassRim = $window.FindName('GlassRim')
-$desktopBackdrop = $window.FindName('DesktopBackdrop')
 $liquidHighlight = $window.FindName('LiquidHighlight')
 $spectralBlue = $window.FindName('SpectralBlue')
 $spectralRose = $window.FindName('SpectralRose')
-$script:windowHandle = [IntPtr]::Zero
-$script:desktopCaptureEnabled = $true
-
-function Update-DesktopBackdrop {
-    if (-not $script:desktopCaptureEnabled -or -not $desktopBackdrop) { return }
-    $bitmap = $null
-    $hBitmap = [IntPtr]::Zero
-    try {
-        $bitmap = [NativeDesktopCapture]::CaptureWindowArea($script:windowHandle)
-        if (-not $bitmap) { return }
-        $hBitmap = $bitmap.GetHbitmap([System.Drawing.Color]::FromArgb(0))
-        $source = [Windows.Interop.Imaging]::CreateBitmapSourceFromHBitmap(
-            $hBitmap,
-            [IntPtr]::Zero,
-            [Windows.Int32Rect]::Empty,
-            [Windows.Media.Imaging.BitmapSizeOptions]::FromEmptyOptions())
-        $source.Freeze()
-        $desktopBackdrop.Source = $source
-    }
-    catch {
-        $script:desktopCaptureEnabled = $false
-    }
-    finally {
-        if ($hBitmap -ne [IntPtr]::Zero) { [NativeDesktopCapture]::ReleaseBitmap($hBitmap) }
-        if ($bitmap) { $bitmap.Dispose() }
-    }
-}
 
 # Optical constants for common crown glass. Fresnel F0 and the edge shift are
 # derived from the IOR rather than tuned as unrelated opacity values.
@@ -658,7 +562,7 @@ $script:fresnelF0 = [Math]::Pow(($script:glassIOR - 1.0) / ($script:glassIOR + 1
 $script:refractionShift = 1.0 - (1.0 / $script:glassIOR)
 
 function Apply-GlassPhysics {
-    $liquidHighlight.Opacity = [Math]::Min(0.62, 0.30 + ($script:refractionShift * 0.55))
+    $liquidHighlight.Opacity = [Math]::Min(0.34, 0.18 + ($script:refractionShift * 0.42))
     $spectralBlue.Opacity = [Math]::Min(0.22, $script:fresnelF0 * 3.4)
     $spectralRose.Opacity = [Math]::Min(0.18, $script:fresnelF0 * 2.8)
 
@@ -677,22 +581,23 @@ function Update-GlassOptics([double]$X, [double]$Y) {
 
     $highlightBrush = $liquidHighlight.Background -as [Windows.Media.RadialGradientBrush]
     if ($highlightBrush) {
-        $center = [Windows.Point]::new(0.08 + ($X * 0.74), 0.04 + ($Y * 0.58))
+        $center = [Windows.Point]::new(0.08 + ($X * 0.22), 0.04 + ($Y * 0.16))
         $highlightBrush.Center = $center
         $highlightBrush.GradientOrigin = $center
     }
 
-    $edgeOffset = $script:refractionShift * (0.7 + ($radius * 1.8))
+    # Dispersion belongs at the rim; keep it sub-pixel so the backdrop never drifts.
+    $edgeOffset = $script:refractionShift * (0.18 + ($radius * 0.55))
     $spectralBlue.RenderTransform = [Windows.Media.TranslateTransform]::new(-$dx * $edgeOffset, -$dy * $edgeOffset)
     $spectralRose.RenderTransform = [Windows.Media.TranslateTransform]::new($dx * $edgeOffset, $dy * $edgeOffset)
 }
 
 $script:themes = @(
-    [pscustomobject]@{ Name = U '\u6e05\u900f\u65e0\u8272\u73bb\u7483'; IsDark = $false; Colors = @('#48FFFFFF', '#2EEEF3F7', '#42FFFFFF'); CardTop = '#58FFFFFF'; CardBottom = '#28FFFFFF'; Border = '#BFFFFFFF' },
-    [pscustomobject]@{ Name = U '\u73bb\u7483\u7070'; IsDark = $false; Colors = @('#78F9FCFE', '#56DDEBF2', '#68FFFFFF'); CardTop = '#66FFFFFF'; CardBottom = '#2EDCEBF2'; Border = '#B5FFFFFF' },
-    [pscustomobject]@{ Name = U '\u96fe\u7d2b'; IsDark = $false; Colors = @('#78FCFAFF', '#56DED5F3', '#68FFF9FF'); CardTop = '#66FFFFFF'; CardBottom = '#2EE8DFF8'; Border = '#B5FFFFFF' },
-    [pscustomobject]@{ Name = U '\u6d77\u76d0\u84dd\u7eff'; IsDark = $false; Colors = @('#78F4FCFF', '#56CFEDE8', '#68F7FFFC'); CardTop = '#66FFFFFF'; CardBottom = '#2ED6F2EC'; Border = '#B5FFFFFF' },
-    [pscustomobject]@{ Name = U '\u67d4\u7c89'; IsDark = $false; Colors = @('#78FFF7FA', '#56EBCFD9', '#68FFFDFC'); CardTop = '#66FFFFFF'; CardBottom = '#2EF4DEE7'; Border = '#B5FFFFFF' }
+    [pscustomobject]@{ Name = U '\u6e05\u900f\u65e0\u8272\u73bb\u7483'; IsDark = $false; Colors = @('#24FFFFFF', '#12F7FAFC', '#1AFFFFFF'); CardTop = '#38FFFFFF'; CardBottom = '#18FFFFFF'; Border = '#8AFFFFFF' },
+    [pscustomobject]@{ Name = U '\u73bb\u7483\u7070'; IsDark = $false; Colors = @('#30FFFFFF', '#1AD9E0E5', '#22FFFFFF'); CardTop = '#40FFFFFF'; CardBottom = '#1EDDE4E9'; Border = '#90FFFFFF' },
+    [pscustomobject]@{ Name = U '\u96fe\u7d2b'; IsDark = $false; Colors = @('#2CFFFFFF', '#18E7E1F2', '#20FFFFFF'); CardTop = '#3CFFFFFF'; CardBottom = '#1CE9E3F3'; Border = '#8CFFFFFF' },
+    [pscustomobject]@{ Name = U '\u6d77\u76d0\u84dd\u7eff'; IsDark = $false; Colors = @('#2CFFFFFF', '#18DDEDEA', '#20FFFFFF'); CardTop = '#3CFFFFFF'; CardBottom = '#1CE0EFEC'; Border = '#8CFFFFFF' },
+    [pscustomobject]@{ Name = U '\u67d4\u7c89'; IsDark = $false; Colors = @('#2CFFFFFF', '#18F0E3E8', '#20FFFFFF'); CardTop = '#3CFFFFFF'; CardBottom = '#1CF2E6EA'; Border = '#8CFFFFFF' }
 )
 $script:themeIndex = 0
 
@@ -761,13 +666,13 @@ function Set-Theme([int]$Index) {
         $window.Resources['TaskChipText'] = New-ColorBrush '#F5FAFF'
     }
     else {
-        $window.Resources['TaskRowBackground'] = New-ColorBrush '#24FFFFFF'
-        $window.Resources['TaskRowBorder'] = New-ColorBrush '#52FFFFFF'
+        $window.Resources['TaskRowBackground'] = New-ColorBrush '#18FFFFFF'
+        $window.Resources['TaskRowBorder'] = New-ColorBrush '#42FFFFFF'
         $window.Resources['TaskRowText'] = New-ColorBrush '#252529'
-        $window.Resources['TaskChipBackground'] = New-ColorBrush '#CAE7E9F4'
+        $window.Resources['TaskChipBackground'] = New-ColorBrush '#78FFFFFF'
         $window.Resources['TaskChipText'] = New-ColorBrush '#252529'
     }
-    $themeButton.Background = New-ColorBrush '#70FFFFFF'
+    $themeButton.Background = New-ColorBrush '#54FFFFFF'
     $themeButton.ToolTip = ((U '\u914d\u8272\uff1a{0}\uff08\u70b9\u51fb\u5207\u6362\uff09  \u00b7  Liquid Glass IOR {1:0.00}') -f $theme.Name, $script:glassIOR)
 }
 
@@ -1202,14 +1107,10 @@ $timer.Interval = [TimeSpan]::FromSeconds(5)
 $timer.Add_Tick({ Refresh-View })
 $window.Add_SourceInitialized({
     $handle = [Windows.Interop.WindowInteropHelper]::new($window).Handle
-    $script:windowHandle = $handle
     $source = [Windows.Interop.HwndSource]::FromHwnd($handle)
     if ($source -and $source.CompositionTarget) {
         $source.CompositionTarget.BackgroundColor = [Windows.Media.Colors]::Transparent
     }
-    # Capture once before first render. WDA_EXCLUDEFROMCAPTURE is intentionally
-    # avoided because it makes the whole widget invisible to remote-desktop apps.
-    Update-DesktopBackdrop
     if (-not [NativeBackdrop]::Enable($handle)) {
         $window.Background = New-ColorBrush '#FFF8FAFC'
     }
