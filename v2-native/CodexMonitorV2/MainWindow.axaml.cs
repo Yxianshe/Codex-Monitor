@@ -205,7 +205,7 @@ public sealed partial class MainWindow : Window
     {
         nint hwnd = TryGetPlatformHandle()?.Handle ?? 0;
         if (hwnd == 0) return;
-        int rounded = 2;
+        int rounded = 3;
         DwmSetWindowAttribute(hwnd, 33, ref rounded, sizeof(int));
         int noSystemBorder = unchecked((int)0xFFFFFFFE);
         DwmSetWindowAttribute(hwnd, 34, ref noSystemBorder, sizeof(int));

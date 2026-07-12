@@ -8,7 +8,7 @@
         Width="550" Height="460" MinWidth="500" MinHeight="420"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None" CanResize="True"
-        Background="#081322"
+        Background="Transparent" TransparencyLevelHint="Transparent"
         TextOptions.TextRenderingMode="Antialias"
         TextOptions.TextHintingMode="Strong"
         TextOptions.BaselinePixelAlignment="Aligned"
@@ -85,8 +85,8 @@
     </Style>
   </Window.Styles>
 
-  <Grid Background="#081322">
-    <Border Margin="0" CornerRadius="10" ClipToBounds="True"
+  <Grid Background="Transparent">
+    <Border Margin="0" CornerRadius="14" ClipToBounds="True"
             BorderThickness="0">
       <Image x:Name="BackdropImage" Stretch="UniformToFill" Opacity="1"
              RenderOptions.BitmapInterpolationMode="HighQuality"/>
