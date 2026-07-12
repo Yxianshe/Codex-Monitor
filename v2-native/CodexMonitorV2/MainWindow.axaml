@@ -8,7 +8,7 @@
         Width="550" Height="460" MinWidth="500" MinHeight="420"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None" CanResize="True"
-        TransparencyLevelHint="Transparent" Background="Transparent"
+        Background="#081322"
         ExtendClientAreaToDecorationsHint="True">
   <Window.Styles>
     <Style Selector="Button.top">
@@ -28,8 +28,8 @@
     </Style>
     <Style Selector="Button.top:pointerover">
       <Setter Property="Foreground" Value="#FFFFFFFF"/>
-      <Setter Property="Background" Value="#526F9FC8"/>
-      <Setter Property="BorderBrush" Value="#B8E8F7FF"/>
+      <Setter Property="Background" Value="#3C9CCFFF"/>
+      <Setter Property="BorderBrush" Value="#E0F3FBFF"/>
     </Style>
     <Style Selector="Button.top:pressed">
       <Setter Property="Foreground" Value="#FFFFFFFF"/>
@@ -50,31 +50,36 @@
     </Style>
   </Window.Styles>
 
-  <Grid Background="#01000000">
+  <Grid Background="#081322">
     <Border Margin="2" CornerRadius="26" ClipToBounds="True"
             BorderBrush="#A8FFFFFF" BorderThickness="1">
-      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"/>
+      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"
+             RenderTransformOrigin="0,0.5" RenderOptions.BitmapInterpolationMode="HighQuality">
+        <Image.RenderTransform>
+          <ScaleTransform ScaleX="1.12" ScaleY="1"/>
+        </Image.RenderTransform>
+      </Image>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
                               Margin="2"
                               Opacity="1"
                               CornerRadius="26"
-                              RefractionHeight="16"
-                              RefractionAmount="24"
+                              RefractionHeight="25"
+                              RefractionAmount="36"
                               DepthEffect="True"
                               ChromaticAberration="True"
-                              BlurRadius="0.5"
+                              BlurRadius="1.15"
                               Vibrancy="1.18"
                               Brightness="0.02"
                               Contrast="1.16"
                               BackdropOpacity="1"
                               TintColor="#00000000"
-                              SurfaceColor="#0AFFFFFF"
+                              SurfaceColor="#0EFFFFFF"
                               HighlightEnabled="True"
-                              HighlightWidth="0.58"
-                              HighlightBlurRadius="0.38"
-                              HighlightOpacity="0.42"
+                              HighlightWidth="0.46"
+                              HighlightBlurRadius="1.25"
+                              HighlightOpacity="0.30"
                               HighlightAngle="55"
                               ShadowEnabled="False"/>
     <Border Margin="16" Background="#12030910" CornerRadius="20">
@@ -203,14 +208,14 @@
     <Grid>
       <Border x:Name="MoveGrip" Width="300" Height="82" HorizontalAlignment="Left" VerticalAlignment="Top"
               Background="#01000000" Margin="10,0,0,0"/>
-      <Border x:Name="TopGrip" Height="9" VerticalAlignment="Top" Background="#01000000" Margin="16,0"/>
-      <Border x:Name="BottomGrip" Height="9" VerticalAlignment="Bottom" Background="#01000000" Margin="16,0"/>
-      <Border x:Name="LeftGrip" Width="9" HorizontalAlignment="Left" Background="#01000000" Margin="0,16"/>
-      <Border x:Name="RightGrip" Width="9" HorizontalAlignment="Right" Background="#01000000" Margin="0,16"/>
-      <Border x:Name="TopLeftGrip" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Top" Background="#01000000"/>
-      <Border x:Name="TopRightGrip" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Top" Background="#01000000"/>
-      <Border x:Name="BottomLeftGrip" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="#01000000"/>
-      <Border x:Name="BottomRightGrip" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#01000000"/>
+      <Border x:Name="TopGrip" Height="10" VerticalAlignment="Top" Background="#01000000" Margin="18,0" Cursor="SizeNorthSouth"/>
+      <Border x:Name="BottomGrip" Height="10" VerticalAlignment="Bottom" Background="#01000000" Margin="18,0" Cursor="SizeNorthSouth"/>
+      <Border x:Name="LeftGrip" Width="10" HorizontalAlignment="Left" Background="#01000000" Margin="0,18" Cursor="SizeWestEast"/>
+      <Border x:Name="RightGrip" Width="10" HorizontalAlignment="Right" Background="#01000000" Margin="0,18" Cursor="SizeWestEast"/>
+      <Border x:Name="TopLeftGrip" Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Top" Background="#01000000" Cursor="TopLeftCorner"/>
+      <Border x:Name="TopRightGrip" Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Top" Background="#01000000" Cursor="TopRightCorner"/>
+      <Border x:Name="BottomLeftGrip" Width="18" Height="18" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="#01000000" Cursor="TopRightCorner"/>
+      <Border x:Name="BottomRightGrip" Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#01000000" Cursor="TopLeftCorner"/>
     </Grid>
   </Grid>
 </Window>

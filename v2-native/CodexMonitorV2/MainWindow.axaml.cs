@@ -40,7 +40,6 @@ public sealed partial class MainWindow : Window
             await RefreshDataAsync();
             _dataTimer.Start();
         };
-        SizeChanged += (_, _) => ApplyNativeWindowMaterial();
         Closed += (_, _) =>
         {
             _dataTimer.Stop();
@@ -69,15 +68,6 @@ public sealed partial class MainWindow : Window
         DwmSetWindowAttribute(hwnd, 33, ref rounded, sizeof(int));
         int noSystemBorder = unchecked((int)0xFFFFFFFE);
         DwmSetWindowAttribute(hwnd, 34, ref noSystemBorder, sizeof(int));
-
-        if (!GetWindowRect(hwnd, out NativeRect rect)) return;
-        int width = Math.Max(1, rect.Right - rect.Left);
-        int height = Math.Max(1, rect.Bottom - rect.Top);
-        double scale = Bounds.Width > 0 ? width / Bounds.Width : RenderScaling;
-        int radius = Math.Max(1, (int)Math.Round(28 * scale));
-        nint region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2);
-        if (region != 0 && SetWindowRgn(hwnd, region, true) == 0) DeleteObject(region);
-
     }
 
     private void WireWindowGrips()
@@ -247,14 +237,8 @@ public sealed partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
-    [DllImport("gdi32.dll")] private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
-    [DllImport("user32.dll")] private static extern int SetWindowRgn(nint hwnd, nint region, bool redraw);
-    [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
-    [DllImport("user32.dll")] private static extern bool GetWindowRect(nint hwnd, out NativeRect rect);
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect { public int Left, Top, Right, Bottom; }
 }
 
 public sealed class TaskRow : INotifyPropertyChanged
