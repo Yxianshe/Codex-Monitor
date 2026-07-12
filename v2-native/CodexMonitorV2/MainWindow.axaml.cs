@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using LiquidGlassAvaloniaUI;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
@@ -123,7 +124,13 @@ public sealed partial class MainWindow : Window
         Image backdrop = this.FindControl<Image>("BackdropImage")!;
         backdrop.Source = next;
         backdrop.RenderTransformOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative);
-        backdrop.RenderTransform = new ScaleTransform(isDay ? 1.06 : 1.75, 1.02);
+        backdrop.RenderTransform = new ScaleTransform(isDay ? 1.06 : 1.0, isDay ? 1.02 : 1.0);
+
+        Color lensTint = Color.Parse(isDay ? "#260D0502" : "#18020A18");
+        this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;
+        this.FindControl<LiquidGlassSurface>("UsageLens")!.SurfaceColor = lensTint;
+        this.FindControl<Border>("ForegroundLayer")!.Background = new SolidColorBrush(
+            Color.Parse(isDay ? "#10080302" : "#08020710"));
         Bitmap? old = _sceneBitmap;
         _sceneBitmap = next;
         _sceneIsDay = isDay;

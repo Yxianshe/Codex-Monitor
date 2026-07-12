@@ -73,7 +73,7 @@ half4 main(float2 coord) {
 
     // A restrained Fresnel glint provides thickness without drawing a hard white outline.
     float directional = 0.35 + 0.65 * max(dot(normal, normalize(float2(-0.55, -0.84))), 0.0);
-    float fresnel = pow(rim, 3.0) * 0.10 * directional;
+    float fresnel = pow(rim, 3.0) * 0.14 * directional;
     glass.rgb += (half3(1.0) - glass.rgb) * fresnel;
 
     float coverage = 1.0 - smoothstep(-EDGE_AA * 0.5, EDGE_AA * 0.5, sdf);

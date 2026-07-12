@@ -54,9 +54,9 @@
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
-                              Margin="6"
+                              Margin="2"
                               Opacity="1"
-                              CornerRadius="16"
+                              CornerRadius="10"
                               RefractionHeight="34"
                               RefractionAmount="32"
                               DepthEffect="True"
@@ -70,7 +70,7 @@
                               SurfaceColor="#03FFFFFF"
                               HighlightEnabled="False"
                               ShadowEnabled="False"/>
-    <Border Margin="16" Background="#12030910" CornerRadius="20"
+    <Border x:Name="ForegroundLayer" Margin="16" Background="#08020710" CornerRadius="20"
             glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
         <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto" Background="#01000000">
@@ -108,11 +108,11 @@
         </Grid>
 
         <Grid x:Name="TaskCard" Grid.Row="2" MinHeight="92">
-          <glass:LiquidGlassSurface IsHitTestVisible="False"
+          <glass:LiquidGlassSurface x:Name="TaskLens" IsHitTestVisible="False"
                                     CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
                                     DepthEffect="True" ChromaticAberration="False" BlurRadius="0.65"
                                     Vibrancy="1.10" Brightness="0.02" Contrast="1.06"
-                                    BackdropOpacity="0.96" SurfaceColor="#3A030A14"
+                                    BackdropOpacity="0.98" SurfaceColor="#18020A18"
                                     HighlightEnabled="False"
                                     ShadowEnabled="False"/>
           <ScrollViewer Margin="14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -142,11 +142,11 @@
         </Grid>
 
         <Grid x:Name="UsageCard" Grid.Row="4">
-          <glass:LiquidGlassSurface IsHitTestVisible="False"
+          <glass:LiquidGlassSurface x:Name="UsageLens" IsHitTestVisible="False"
                                     CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
                                     DepthEffect="True" ChromaticAberration="False" BlurRadius="0.65"
                                     Vibrancy="1.10" Brightness="0.02" Contrast="1.06"
-                                    BackdropOpacity="0.96" SurfaceColor="#3A030A14"
+                                    BackdropOpacity="0.98" SurfaceColor="#18020A18"
                                     HighlightEnabled="False"
                                     ShadowEnabled="False"/>
           <Grid Margin="20,10" RowDefinitions="64,1,64">
