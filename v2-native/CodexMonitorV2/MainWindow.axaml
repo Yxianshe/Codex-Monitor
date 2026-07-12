@@ -53,12 +53,12 @@
   <Grid Background="#01000000">
     <Border Margin="2" CornerRadius="26" ClipToBounds="True"
             BorderBrush="#A8FFFFFF" BorderThickness="1">
-      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.35"/>
+      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="1"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
                               Margin="2"
-                              Opacity="0.78"
+                              Opacity="1"
                               CornerRadius="26"
                               RefractionHeight="16"
                               RefractionAmount="24"
@@ -68,7 +68,7 @@
                               Vibrancy="1.18"
                               Brightness="0.02"
                               Contrast="1.16"
-                              BackdropOpacity="0.22"
+                              BackdropOpacity="1"
                               TintColor="#00000000"
                               SurfaceColor="#0AFFFFFF"
                               HighlightEnabled="True"
@@ -199,5 +199,18 @@
         </Border>
       </Grid>
       </Border>
+
+    <Grid>
+      <Border x:Name="MoveGrip" Width="300" Height="82" HorizontalAlignment="Left" VerticalAlignment="Top"
+              Background="#01000000" Margin="10,0,0,0"/>
+      <Border x:Name="TopGrip" Height="9" VerticalAlignment="Top" Background="#01000000" Margin="16,0"/>
+      <Border x:Name="BottomGrip" Height="9" VerticalAlignment="Bottom" Background="#01000000" Margin="16,0"/>
+      <Border x:Name="LeftGrip" Width="9" HorizontalAlignment="Left" Background="#01000000" Margin="0,16"/>
+      <Border x:Name="RightGrip" Width="9" HorizontalAlignment="Right" Background="#01000000" Margin="0,16"/>
+      <Border x:Name="TopLeftGrip" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Top" Background="#01000000"/>
+      <Border x:Name="TopRightGrip" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Top" Background="#01000000"/>
+      <Border x:Name="BottomLeftGrip" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="#01000000"/>
+      <Border x:Name="BottomRightGrip" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#01000000"/>
+    </Grid>
   </Grid>
 </Window>

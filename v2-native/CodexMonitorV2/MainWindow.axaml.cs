@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -22,8 +21,6 @@ public sealed partial class MainWindow : Window
     private bool? _sceneIsDay;
     private bool _showTokens;
     private DateTime _lastQuotaRefresh = DateTime.MinValue;
-    private int _dragHitTest;
-    private NativePoint _lastPointer;
     private bool? _manualIsDay;
 
     public MainWindow()
@@ -50,9 +47,7 @@ public sealed partial class MainWindow : Window
             _sceneBitmap?.Dispose();
         };
 
-        AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel, true);
-        AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, true);
-        AddHandler(PointerReleasedEvent, OnWindowPointerReleased, RoutingStrategies.Tunnel, true);
+        WireWindowGrips();
         this.FindControl<Button>("CloseButton")!.Click += (_, _) => Close();
         this.FindControl<Button>("MinimizeButton")!.Click += (_, _) => WindowState = WindowState.Minimized;
         this.FindControl<Button>("PinButton")!.Click += (_, _) => Topmost = !Topmost;
@@ -85,87 +80,47 @@ public sealed partial class MainWindow : Window
 
     }
 
-    private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void WireWindowGrips()
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        Point point = e.GetPosition(this);
-        const double grip = 9;
-        bool left = point.X <= grip;
-        bool right = point.X >= Bounds.Width - grip;
-        bool top = point.Y <= grip;
-        bool bottom = point.Y >= Bounds.Height - grip;
-        _dragHitTest = (left, right, top, bottom) switch
+        this.FindControl<Border>("MoveGrip")!.PointerPressed += (_, e) =>
         {
-            (true, _, true, _) => 13,
-            (_, true, true, _) => 14,
-            (true, _, _, true) => 16,
-            (_, true, _, true) => 17,
-            (true, _, _, _) => 10,
-            (_, true, _, _) => 11,
-            (_, _, true, _) => 12,
-            (_, _, _, true) => 15,
-            _ when point.Y <= 82 && point.X < Bounds.Width - 230 => 2,
-            _ => 0
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginNativeDrag(2);
         };
-        if (_dragHitTest == 0) return;
-        _lastPointer = GetMessagePoint();
-        e.Pointer.Capture(this);
-        e.Handled = true;
+        WireResizeGrip("TopGrip", WindowEdge.North);
+        WireResizeGrip("BottomGrip", WindowEdge.South);
+        WireResizeGrip("LeftGrip", WindowEdge.West);
+        WireResizeGrip("RightGrip", WindowEdge.East);
+        WireResizeGrip("TopLeftGrip", WindowEdge.NorthWest);
+        WireResizeGrip("TopRightGrip", WindowEdge.NorthEast);
+        WireResizeGrip("BottomLeftGrip", WindowEdge.SouthWest);
+        WireResizeGrip("BottomRightGrip", WindowEdge.SouthEast);
     }
 
-    private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
+    private void WireResizeGrip(string name, WindowEdge edge)
     {
-        if (_dragHitTest == 0) return;
-        NativePoint current = GetMessagePoint();
-        int dx = current.X - _lastPointer.X;
-        int dy = current.Y - _lastPointer.Y;
-        _lastPointer = current;
-        if (dx == 0 && dy == 0) return;
-
-        if (_dragHitTest == 2)
+        this.FindControl<Border>(name)!.PointerPressed += (_, e) =>
         {
-            Position = new PixelPoint(Position.X + dx, Position.Y + dy);
-            return;
-        }
-
-        double scale = RenderScaling;
-        double width = Bounds.Width * scale;
-        double height = Bounds.Height * scale;
-        int x = Position.X;
-        int y = Position.Y;
-        bool left = _dragHitTest is 10 or 13 or 16;
-        bool right = _dragHitTest is 11 or 14 or 17;
-        bool top = _dragHitTest is 12 or 13 or 14;
-        bool bottom = _dragHitTest is 15 or 16 or 17;
-
-        if (left)
-        {
-            double next = Math.Max(MinWidth * scale, width - dx);
-            x += (int)Math.Round(width - next);
-            width = next;
-        }
-        else if (right) width = Math.Max(MinWidth * scale, width + dx);
-
-        if (top)
-        {
-            double next = Math.Max(MinHeight * scale, height - dy);
-            y += (int)Math.Round(height - next);
-            height = next;
-        }
-        else if (bottom) height = Math.Max(MinHeight * scale, height + dy);
-
-        Position = new PixelPoint(x, y);
-        Width = width / scale;
-        Height = height / scale;
-        e.Handled = true;
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                BeginNativeDrag(edge switch
+                {
+                    WindowEdge.West => 10,
+                    WindowEdge.East => 11,
+                    WindowEdge.North => 12,
+                    WindowEdge.NorthWest => 13,
+                    WindowEdge.NorthEast => 14,
+                    WindowEdge.South => 15,
+                    WindowEdge.SouthWest => 16,
+                    _ => 17
+                });
+        };
     }
 
-    private void OnWindowPointerReleased(object? sender, PointerReleasedEventArgs e)
+    private void BeginNativeDrag(int hitTest)
     {
-        if (_dragHitTest == 0) return;
-        _dragHitTest = 0;
-        e.Pointer.Capture(null);
-        e.Handled = true;
+        nint hwnd = TryGetPlatformHandle()?.Handle ?? 0;
+        if (hwnd == 0) return;
+        ReleaseCapture();
+        SendMessage(hwnd, 0x00A1, (nint)hitTest, 0);
     }
 
     private void ApplySceneBackground()
@@ -296,15 +251,8 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")] private static extern int SetWindowRgn(nint hwnd, nint region, bool redraw);
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint hwnd, out NativeRect rect);
-    private static NativePoint GetMessagePoint()
-    {
-        uint packed = GetMessagePos();
-        return new NativePoint { X = (short)(packed & 0xFFFF), Y = (short)(packed >> 16) };
-    }
-
-    [DllImport("user32.dll")] private static extern uint GetMessagePos();
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint { public int X, Y; }
+    [DllImport("user32.dll")] private static extern bool ReleaseCapture();
+    [DllImport("user32.dll")] private static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect { public int Left, Top, Right, Bottom; }
 }
