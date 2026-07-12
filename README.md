@@ -5,39 +5,55 @@
 </p>
 
 <p align="center">
-  一款轻量、清晰的 Windows Codex 桌面监控工具。<br>
-  实时查看活跃任务、累计 Token、可用模型，以及 5 小时与每周使用限额。
+  <strong>把 Codex 的运行状态装进一块桌面液态玻璃。</strong><br>
+  实时查看活跃任务、当前模型、智能等级、累计 Token，以及 5 小时与每周限额。
 </p>
 
 <p align="center">
-  <a href="https://github.com/Yxianshe/Codex-Monitor/releases/latest"><strong>下载最新版</strong></a>
-  ·
-  <a href="https://github.com/Yxianshe/Codex-Monitor/releases">全部版本</a>
+  <img src="https://img.shields.io/github/v/release/Yxianshe/Codex-Monitor?display_name=tag&style=flat-square" alt="Release">
+  <img src="https://img.shields.io/badge/Windows-x64-4B8BFF?style=flat-square" alt="Windows x64">
+  <img src="https://img.shields.io/github/license/Yxianshe/Codex-Monitor?style=flat-square" alt="MIT License">
 </p>
 
-![Codex Monitor V2](assets/codex-monitor-v2.png)
+<p align="center">
+  <a href="https://github.com/Yxianshe/Codex-Monitor/releases/download/v2.1.1/CodexTaskMonitor-v2.1.1.exe"><strong>下载 V2.1.1</strong></a>
+  ·
+  <a href="https://github.com/Yxianshe/Codex-Monitor/releases">全部版本</a>
+  ·
+  <a href="#从源码构建">从源码构建</a>
+</p>
 
-## V2.1 特性
+<p align="center">
+  <img src="assets/codex-monitor-v2.1.1.png" width="550" alt="Codex Monitor V2.1.1 液态玻璃界面">
+</p>
 
-- **实时任务列表**：优先显示任务标题，而不是截取整段提示词。
-- **模型 / Token 切换**：点击 `Token`，在任务当前模型色标和每个任务的累计 Token 之间切换。
-- **新任务默认模型**：从 Codex 动态模型目录选择新任务的默认模型和智能等级；运行中任务只读显示真实状态，不同模型族与等级使用独立色标。
-- **限额概览**：展示 5 小时与每周剩余额度、已用比例、重置倒计时和准确日期卡片。
-- **V2.1 液态玻璃**：使用 Skia SDF 位移透镜、边缘 RGB 色散、低振幅 turbulence、柔和 Fresnel 高光与循环珠光描边。
-- **日夜场景**：07:00–18:59 使用太阳主题，19:00–06:59 使用月球主题；右上角按钮可手动切换。
-- **桌面窗口体验**：支持置顶、最小化、快速拖动，以及四边和四角缩放。
-- **远程桌面兼容**：使用适合集成显卡与远程桌面的 Skia 渲染路径。
-- **本地优先**：任务、Token 和限额数据只在本机读取与显示；只有用户主动更改“新任务默认”时才写入本机 Codex 配置。
+## 一眼看到 Codex 正在做什么
 
-## 快速开始
+- **活跃任务**：只显示任务标题，快速确认当前有哪些任务正在运行。
+- **模型与智能等级**：以彩色色标展示每个任务真实使用的模型与推理强度。
+- **累计 Token**：点击 `Token`，在模型状态与每个任务的累计 Token 之间切换。
+- **限额与重置**：同时展示 5 小时、每周剩余额度、已用比例、重置倒计时和准确日期。
+- **新任务默认值**：直接选择 Codex 新任务默认模型和智能等级。
 
-1. 从 [Releases](https://github.com/Yxianshe/Codex-Monitor/releases) 下载最新的 `CodexTaskMonitor-v2.x.x.exe`。
-2. 双击运行，无需安装。
+## V2.1.1：真实折射的液态玻璃
+
+- Skia Runtime Shader 实现圆角 SDF 折射，不只是普通背景模糊。
+- 边缘 RGB 色散、柔和 Fresnel 高光、低振幅 turbulence 与循环珠光描边。
+- 日间太阳 / 夜间月球场景，右上角可随时手动切换。
+- 轻微圆角、清晰分隔线与更协调的模型标签间距。
+- 支持置顶、最小化、快速拖动，以及四边和四角缩放。
+- ANGLE / 集成显卡优先，并保留远程桌面的软件渲染回退。
+- 本地优先：无遥测、无第三方上传，仅主动修改默认模型时写入本机 Codex 配置。
+
+## 下载与使用
+
+1. 下载 [CodexTaskMonitor-v2.1.1.exe](https://github.com/Yxianshe/Codex-Monitor/releases/download/v2.1.1/CodexTaskMonitor-v2.1.1.exe)。
+2. 双击运行，无需安装 .NET 或额外依赖。
 3. 保持 Codex 桌面端已登录并使用过至少一个任务。
 
 > Windows 可能会对未签名的个人开发程序显示 SmartScreen 提示。请确认下载来源为本仓库后再运行。
 
-## 顶部控件
+## 控件说明
 
 | 控件 | 功能 |
 |---|---|
@@ -49,7 +65,7 @@
 
 窗口顶部空白区域可拖动；四条边与四个角均可调整大小。
 
-> Codex 不支持从另一个客户端把已经开始推理的当前回合热切换到另一模型。任务行只读显示当前状态；顶部“默认”选择器写入 Codex 的新任务默认模型与智能等级。
+> 已经开始推理的当前回合不能从另一个客户端安全热切换模型。任务行因此只读显示真实状态；顶部“默认”选择器用于设置 Codex 新任务的默认模型与智能等级。
 
 ## 从源码构建
 
