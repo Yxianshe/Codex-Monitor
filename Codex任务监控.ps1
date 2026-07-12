@@ -8,6 +8,24 @@ $script:singleInstanceMutex = [Threading.Mutex]::new(
     'Local\CodexTaskMonitor.UI.SingleInstance',
     [ref]$script:singleInstanceCreated)
 if (-not $script:singleInstanceCreated) {
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class NativeSingleInstance {
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindow(string className, string windowName);
+    [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr hwnd, int command);
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hwnd);
+    public static void ActivateExisting() {
+        var hwnd = FindWindow(null, "Codex Monitor");
+        if (hwnd != IntPtr.Zero) {
+            ShowWindowAsync(hwnd, 9); // SW_RESTORE
+            SetForegroundWindow(hwnd);
+        }
+    }
+}
+'@
+    [NativeSingleInstance]::ActivateExisting()
     $script:singleInstanceMutex.Dispose()
     exit
 }
