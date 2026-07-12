@@ -1,12 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using LiquidGlassAvaloniaUI;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
@@ -21,17 +21,10 @@ public sealed partial class MainWindow : Window
     private Bitmap? _sceneBitmap;
     private bool? _sceneIsDay;
     private bool _showTokens;
-    private int _themeIndex;
     private DateTime _lastQuotaRefresh = DateTime.MinValue;
-
-    private readonly (Color Tint, Color Surface)[] _themes =
-    {
-        (Color.Parse("#0EFFFFFF"), Color.Parse("#08FFFFFF")),
-        (Color.Parse("#16DCE5EA"), Color.Parse("#0CFFFFFF")),
-        (Color.Parse("#14DDD6F0"), Color.Parse("#0CFFFFFF")),
-        (Color.Parse("#14CFE8E3"), Color.Parse("#0CFFFFFF")),
-        (Color.Parse("#14EDD5DE"), Color.Parse("#0CFFFFFF"))
-    };
+    private int _dragHitTest;
+    private NativePoint _lastPointer;
+    private bool? _manualIsDay;
 
     public MainWindow()
     {
@@ -57,10 +50,9 @@ public sealed partial class MainWindow : Window
             _sceneBitmap?.Dispose();
         };
 
-        this.FindControl<Control>("TitleBar")!.PointerPressed += (_, e) =>
-        {
-            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
-        };
+        AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel, true);
+        AddHandler(PointerMovedEvent, OnWindowPointerMoved, RoutingStrategies.Tunnel, true);
+        AddHandler(PointerReleasedEvent, OnWindowPointerReleased, RoutingStrategies.Tunnel, true);
         this.FindControl<Button>("CloseButton")!.Click += (_, _) => Close();
         this.FindControl<Button>("MinimizeButton")!.Click += (_, _) => WindowState = WindowState.Minimized;
         this.FindControl<Button>("PinButton")!.Click += (_, _) => Topmost = !Topmost;
@@ -69,7 +61,7 @@ public sealed partial class MainWindow : Window
             _showTokens = !_showTokens;
             RefreshTaskDetails();
         };
-        this.FindControl<Button>("ThemeButton")!.Click += (_, _) => ApplyNextTheme();
+        this.FindControl<Button>("ThemeButton")!.Click += (_, _) => ToggleScene();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -89,11 +81,95 @@ public sealed partial class MainWindow : Window
         int radius = Math.Max(1, (int)Math.Round(28 * scale));
         nint region = CreateRoundRectRgn(0, 0, width + 1, height + 1, radius * 2, radius * 2);
         if (region != 0 && SetWindowRgn(hwnd, region, true) == 0) DeleteObject(region);
+
+    }
+
+    private void OnWindowPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        Point point = e.GetPosition(this);
+        const double grip = 9;
+        bool left = point.X <= grip;
+        bool right = point.X >= Bounds.Width - grip;
+        bool top = point.Y <= grip;
+        bool bottom = point.Y >= Bounds.Height - grip;
+        _dragHitTest = (left, right, top, bottom) switch
+        {
+            (true, _, true, _) => 13,
+            (_, true, true, _) => 14,
+            (true, _, _, true) => 16,
+            (_, true, _, true) => 17,
+            (true, _, _, _) => 10,
+            (_, true, _, _) => 11,
+            (_, _, true, _) => 12,
+            (_, _, _, true) => 15,
+            _ when point.Y <= 82 && point.X < Bounds.Width - 230 => 2,
+            _ => 0
+        };
+        if (_dragHitTest == 0) return;
+        _lastPointer = GetMessagePoint();
+        e.Pointer.Capture(this);
+        e.Handled = true;
+    }
+
+    private void OnWindowPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_dragHitTest == 0) return;
+        NativePoint current = GetMessagePoint();
+        int dx = current.X - _lastPointer.X;
+        int dy = current.Y - _lastPointer.Y;
+        _lastPointer = current;
+        if (dx == 0 && dy == 0) return;
+
+        if (_dragHitTest == 2)
+        {
+            Position = new PixelPoint(Position.X + dx, Position.Y + dy);
+            return;
+        }
+
+        double scale = RenderScaling;
+        double width = Bounds.Width * scale;
+        double height = Bounds.Height * scale;
+        int x = Position.X;
+        int y = Position.Y;
+        bool left = _dragHitTest is 10 or 13 or 16;
+        bool right = _dragHitTest is 11 or 14 or 17;
+        bool top = _dragHitTest is 12 or 13 or 14;
+        bool bottom = _dragHitTest is 15 or 16 or 17;
+
+        if (left)
+        {
+            double next = Math.Max(MinWidth * scale, width - dx);
+            x += (int)Math.Round(width - next);
+            width = next;
+        }
+        else if (right) width = Math.Max(MinWidth * scale, width + dx);
+
+        if (top)
+        {
+            double next = Math.Max(MinHeight * scale, height - dy);
+            y += (int)Math.Round(height - next);
+            height = next;
+        }
+        else if (bottom) height = Math.Max(MinHeight * scale, height + dy);
+
+        Position = new PixelPoint(x, y);
+        Width = width / scale;
+        Height = height / scale;
+        e.Handled = true;
+    }
+
+    private void OnWindowPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_dragHitTest == 0) return;
+        _dragHitTest = 0;
+        e.Pointer.Capture(null);
+        e.Handled = true;
     }
 
     private void ApplySceneBackground()
     {
-        bool isDay = DateTime.Now.Hour is >= 7 and < 19;
+        bool isDay = _manualIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
         if (_sceneIsDay == isDay) return;
 
         Uri uri = new($"avares://CodexMonitorV2/Assets/{(isDay ? "sun" : "moon")}.png");
@@ -200,12 +276,12 @@ public sealed partial class MainWindow : Window
         return $"{Math.Max(1, minutes)}分";
     }
 
-    private void ApplyNextTheme()
+    private void ToggleScene()
     {
-        _themeIndex = (_themeIndex + 1) % _themes.Length;
-        LiquidGlassSurface panel = this.FindControl<LiquidGlassSurface>("GlassPanel")!;
-        panel.TintColor = _themes[_themeIndex].Tint;
-        panel.SurfaceColor = _themes[_themeIndex].Surface;
+        bool current = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        _manualIsDay = !current;
+        _sceneIsDay = null;
+        ApplySceneBackground();
     }
 
     private void RefreshTaskDetails()
@@ -218,6 +294,15 @@ public sealed partial class MainWindow : Window
     [DllImport("gdi32.dll")] private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int width, int height);
     [DllImport("user32.dll")] private static extern int SetWindowRgn(nint hwnd, nint region, bool redraw);
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(nint handle);
+    private static NativePoint GetMessagePoint()
+    {
+        uint packed = GetMessagePos();
+        return new NativePoint { X = (short)(packed & 0xFFFF), Y = (short)(packed >> 16) };
+    }
+
+    [DllImport("user32.dll")] private static extern uint GetMessagePos();
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint { public int X, Y; }
 }
 
 public sealed class TaskRow : INotifyPropertyChanged

@@ -13,24 +13,35 @@
   <Window.Styles>
     <Style Selector="Button.top">
       <Setter Property="MinWidth" Value="34"/>
-      <Setter Property="Height" Value="34"/>
+      <Setter Property="Height" Value="32"/>
       <Setter Property="Margin" Value="5,0,0,0"/>
       <Setter Property="Padding" Value="10,0"/>
-      <Setter Property="CornerRadius" Value="17"/>
+      <Setter Property="CornerRadius" Value="16"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="BorderBrush" Value="#55FFFFFF"/>
-      <Setter Property="Background" Value="#36060B12"/>
+      <Setter Property="BorderBrush" Value="#48FFFFFF"/>
+      <Setter Property="Background" Value="#5002070D"/>
       <Setter Property="Foreground" Value="#FFFFFFFF"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <Style Selector="Button.top:pointerover">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="Background" Value="#526F9FC8"/>
+      <Setter Property="BorderBrush" Value="#B8E8F7FF"/>
+    </Style>
+    <Style Selector="Button.top:pressed">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="Background" Value="#6601070D"/>
+      <Setter Property="BorderBrush" Value="#86FFFFFF"/>
+    </Style>
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="#26060B12"/>
-      <Setter Property="BorderBrush" Value="#70FFFFFF"/>
+      <Setter Property="Background" Value="#1C07101A"/>
+      <Setter Property="BorderBrush" Value="#98FFFFFF"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="17"/>
+      <Setter Property="BoxShadow" Value="0 7 18 0 #38000000, inset 0 1 2 0 #72FFFFFF"/>
     </Style>
     <Style Selector="ProgressBar">
       <Setter Property="Height" Value="7"/>
@@ -39,37 +50,35 @@
     </Style>
   </Window.Styles>
 
-  <Grid>
-    <Border CornerRadius="28" ClipToBounds="True">
-      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.50"/>
+  <Grid Background="#01000000">
+    <Border Margin="2" CornerRadius="26" ClipToBounds="True">
+      <Image x:Name="BackdropImage" Stretch="Fill" Opacity="0.30"/>
     </Border>
 
     <glass:LiquidGlassSurface x:Name="GlassPanel"
-                              CornerRadius="28"
-                              RefractionHeight="10"
-                              RefractionAmount="12"
+                              Margin="2"
+                              Opacity="0.30"
+                              CornerRadius="26"
+                              RefractionHeight="14"
+                              RefractionAmount="20"
                               DepthEffect="True"
                               ChromaticAberration="True"
-                              BlurRadius="1.2"
-                              Vibrancy="1.05"
-                              Brightness="-0.06"
-                              Contrast="1.08"
-                              BackdropOpacity="1"
+                              BlurRadius="0.2"
+                              Vibrancy="1.18"
+                              Brightness="0.02"
+                              Contrast="1.16"
+                              BackdropOpacity="0.05"
                               TintColor="#00000000"
-                              SurfaceColor="#08000000"
+                              SurfaceColor="#04000000"
                               HighlightEnabled="True"
                               HighlightWidth="0.42"
                               HighlightBlurRadius="0.30"
-                              HighlightOpacity="0.16"
+                              HighlightOpacity="0.28"
                               HighlightAngle="55"
-                              ShadowEnabled="True"
-                              ShadowRadius="1"
-                              ShadowOffset="0,1"
-                              ShadowColor="#24000000"
-                              ShadowOpacity="0.35">
-      <Border Margin="16" Background="#36030910" CornerRadius="20">
+                              ShadowEnabled="False"/>
+    <Border Margin="16" Background="#12030910" CornerRadius="20">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
-        <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto">
+        <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto" Background="#01000000">
           <StackPanel Spacing="1">
             <TextBlock Text="C O D E X   M O N I T O R" FontSize="9" FontWeight="SemiBold" Foreground="#D8FFFFFF"/>
             <TextBlock Text="任务与使用量" FontSize="21" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
@@ -90,8 +99,8 @@
             <Button x:Name="MinimizeButton" Classes="top" Width="34" Padding="0">
               <Border Width="13" Height="2" CornerRadius="1" Background="#FFFFFFFF"/>
             </Button>
-            <Button x:Name="CloseButton" Classes="top" Width="34" Padding="0" Foreground="#FFFFA4AA" Background="#52FFF2F2">
-              <PathIcon Width="13" Height="13" Foreground="#FFFFA4AA" Data="M2,1 L7,6 L12,1 L13,2 L8,7 L13,12 L12,13 L7,8 L2,13 L1,12 L6,7 L1,2 Z"/>
+            <Button x:Name="CloseButton" Classes="top" Width="34" Padding="0" Foreground="#FFFFFFFF" Background="#42B85F67">
+              <PathIcon Width="13" Height="13" Foreground="#FFFFFFFF" Data="M2,1 L7,6 L12,1 L13,2 L8,7 L13,12 L12,13 L7,8 L2,13 L1,12 L6,7 L1,2 Z"/>
             </Button>
           </StackPanel>
         </Grid>
@@ -106,12 +115,12 @@
             <ItemsControl ItemsSource="{Binding Tasks}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#2C060B12" BorderBrush="#48FFFFFF" BorderThickness="1"
+                  <Border Background="#20060B12" BorderBrush="#5EFFFFFF" BorderThickness="1"
                           CornerRadius="13" Padding="10,7" Margin="1,2">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
                                  FontSize="13.5" Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                      <Border Grid.Column="1" Background="#46060B12" BorderBrush="#52FFFFFF"
+                      <Border Grid.Column="1" Background="#30060B12" BorderBrush="#62FFFFFF"
                               BorderThickness="1" CornerRadius="12" Padding="9,4">
                         <TextBlock Text="{Binding Detail}" FontSize="11.5" Foreground="#E8FFFFFF"/>
                       </Border>
@@ -189,6 +198,5 @@
         </Border>
       </Grid>
       </Border>
-    </glass:LiquidGlassSurface>
   </Grid>
 </Window>
