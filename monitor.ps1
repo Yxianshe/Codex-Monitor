@@ -14,8 +14,10 @@ if (-not $script:singleInstanceCreated) {
 
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
-Add-Type @'
+Add-Type -AssemblyName System.Drawing
+Add-Type -ReferencedAssemblies 'System.Drawing.dll' @'
 using System;
+using System.Drawing;
 using System.Runtime.InteropServices;
 public static class NativeResize {
     [DllImport("user32.dll")] public static extern bool ReleaseCapture();
@@ -85,6 +87,43 @@ public static class NativeBackdrop {
             }
         }
         catch { return false; }
+    }
+}
+
+public static class NativeDesktopCapture {
+    private const uint WDA_EXCLUDEFROMCAPTURE = 0x11;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint affinity);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr handle);
+
+    public static bool ExcludeFromCapture(IntPtr hwnd) {
+        try { return SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE); }
+        catch { return false; }
+    }
+
+    public static Bitmap CaptureWindowArea(IntPtr hwnd) {
+        RECT rect;
+        if (!GetWindowRect(hwnd, out rect)) return null;
+        int width = Math.Max(1, rect.Right - rect.Left);
+        int height = Math.Max(1, rect.Bottom - rect.Top);
+        var bitmap = new Bitmap(width, height);
+        using (var graphics = Graphics.FromImage(bitmap)) {
+            graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+        }
+        return bitmap;
+    }
+
+    public static void ReleaseBitmap(IntPtr handle) {
+        if (handle != IntPtr.Zero) DeleteObject(handle);
     }
 }
 '@
@@ -199,12 +238,12 @@ $xaml = @'
     </Style>
   </Window.Resources>
 
-  <Border Name="RootShell" BorderBrush="#BFFFFFFF" BorderThickness="1" CornerRadius="22" Padding="16">
+  <Border Name="RootShell" BorderBrush="#8FFFFFFF" BorderThickness="1" CornerRadius="22" Padding="16" ClipToBounds="True">
     <Border.Background>
       <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#D9F4F8FA" Offset="0"/>
-        <GradientStop Color="#D9EEF1F5" Offset="0.52"/>
-        <GradientStop Color="#D9F7F4F1" Offset="1"/>
+        <GradientStop Color="#28FFFFFF" Offset="0"/>
+        <GradientStop Color="#18FFFFFF" Offset="0.52"/>
+        <GradientStop Color="#22FFFFFF" Offset="1"/>
       </LinearGradientBrush>
     </Border.Background>
     <Grid>
@@ -215,6 +254,13 @@ $xaml = @'
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
+      <!-- Live desktop sample; the window is excluded from capture to avoid recursion. -->
+      <Image Name="DesktopBackdrop" Grid.RowSpan="5" Margin="-16" Stretch="Fill" Opacity="0.94"
+             IsHitTestVisible="False">
+        <Image.Effect>
+          <BlurEffect Radius="6" RenderingBias="Performance"/>
+        </Image.Effect>
+      </Image>
       <Border Name="GlassRim" Grid.RowSpan="5" Margin="-14" CornerRadius="20" BorderThickness="1.4"
               Background="Transparent" IsHitTestVisible="False">
         <Border.BorderBrush>
@@ -393,8 +439,8 @@ $xaml = @'
               BorderThickness="1" CornerRadius="14" Padding="10,6">
         <Border.Background>
           <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#68FFFFFF" Offset="0"/>
-            <GradientStop Color="#38F2F8FA" Offset="1"/>
+            <GradientStop Color="#46FFFFFF" Offset="0"/>
+            <GradientStop Color="#22FFFFFF" Offset="1"/>
           </LinearGradientBrush>
         </Border.Background>
         <Border.Effect>
@@ -565,9 +611,37 @@ $themeButton = $window.FindName('ThemeButton')
 $titleBar = $window.FindName('TitleBar')
 $dragArea = $window.FindName('DragArea')
 $glassRim = $window.FindName('GlassRim')
+$desktopBackdrop = $window.FindName('DesktopBackdrop')
 $liquidHighlight = $window.FindName('LiquidHighlight')
 $spectralBlue = $window.FindName('SpectralBlue')
 $spectralRose = $window.FindName('SpectralRose')
+$script:windowHandle = [IntPtr]::Zero
+$script:desktopCaptureEnabled = $false
+
+function Update-DesktopBackdrop {
+    if (-not $script:desktopCaptureEnabled -or -not $desktopBackdrop) { return }
+    $bitmap = $null
+    $hBitmap = [IntPtr]::Zero
+    try {
+        $bitmap = [NativeDesktopCapture]::CaptureWindowArea($script:windowHandle)
+        if (-not $bitmap) { return }
+        $hBitmap = $bitmap.GetHbitmap([System.Drawing.Color]::FromArgb(0))
+        $source = [Windows.Interop.Imaging]::CreateBitmapSourceFromHBitmap(
+            $hBitmap,
+            [IntPtr]::Zero,
+            [Windows.Int32Rect]::Empty,
+            [Windows.Media.Imaging.BitmapSizeOptions]::FromEmptyOptions())
+        $source.Freeze()
+        $desktopBackdrop.Source = $source
+    }
+    catch {
+        $script:desktopCaptureEnabled = $false
+    }
+    finally {
+        if ($hBitmap -ne [IntPtr]::Zero) { [NativeDesktopCapture]::ReleaseBitmap($hBitmap) }
+        if ($bitmap) { $bitmap.Dispose() }
+    }
+}
 
 # Optical constants for common crown glass. Fresnel F0 and the edge shift are
 # derived from the IOR rather than tuned as unrelated opacity values.
@@ -1118,19 +1192,30 @@ function Refresh-View {
 $timer = [Windows.Threading.DispatcherTimer]::new()
 $timer.Interval = [TimeSpan]::FromSeconds(5)
 $timer.Add_Tick({ Refresh-View })
+$backdropTimer = [Windows.Threading.DispatcherTimer]::new()
+$backdropTimer.Interval = [TimeSpan]::FromMilliseconds(180)
+$backdropTimer.Add_Tick({ Update-DesktopBackdrop })
 $window.Add_SourceInitialized({
     $handle = [Windows.Interop.WindowInteropHelper]::new($window).Handle
+    $script:windowHandle = $handle
     $source = [Windows.Interop.HwndSource]::FromHwnd($handle)
     if ($source -and $source.CompositionTarget) {
         $source.CompositionTarget.BackgroundColor = [Windows.Media.Colors]::Transparent
     }
-    if (-not [NativeBackdrop]::Enable($handle)) {
+    $script:desktopCaptureEnabled = [NativeDesktopCapture]::ExcludeFromCapture($handle)
+    if (-not $script:desktopCaptureEnabled -and -not [NativeBackdrop]::Enable($handle)) {
         $window.Background = New-ColorBrush '#FFF8FAFC'
     }
 })
-$window.Add_ContentRendered({ Refresh-View; $timer.Start() })
+$window.Add_ContentRendered({
+    Update-DesktopBackdrop
+    Refresh-View
+    $timer.Start()
+    if ($script:desktopCaptureEnabled) { $backdropTimer.Start() }
+})
 $window.Add_Closed({
     $timer.Stop()
+    $backdropTimer.Stop()
     if ($script:quotaJob) {
         Stop-Job $script:quotaJob -ErrorAction SilentlyContinue
         Remove-Job $script:quotaJob -Force -ErrorAction SilentlyContinue
