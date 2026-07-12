@@ -116,14 +116,14 @@
                                     CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
                                     DepthEffect="True" ChromaticAberration="False" BlurRadius="0.65"
                                     Vibrancy="1.10" Brightness="0.02" Contrast="1.06"
-                                    BackdropOpacity="0.96" SurfaceColor="#0C030A14"
+                                    BackdropOpacity="0.96" SurfaceColor="#3A030A14"
                                     HighlightEnabled="False"
                                     ShadowEnabled="False"/>
           <ScrollViewer Margin="14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Tasks}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#16FFFFFF" BorderThickness="0"
+                  <Border Background="#16030914" BorderThickness="0"
                           CornerRadius="13" Padding="10,7" Margin="1,2">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
@@ -150,7 +150,7 @@
                                     CornerRadius="18" RefractionHeight="18" RefractionAmount="24"
                                     DepthEffect="True" ChromaticAberration="False" BlurRadius="0.65"
                                     Vibrancy="1.10" Brightness="0.02" Contrast="1.06"
-                                    BackdropOpacity="0.96" SurfaceColor="#0C030A14"
+                                    BackdropOpacity="0.96" SurfaceColor="#3A030A14"
                                     HighlightEnabled="False"
                                     ShadowEnabled="False"/>
           <Grid Margin="20,10" RowDefinitions="64,1,64">
