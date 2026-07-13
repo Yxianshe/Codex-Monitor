@@ -31,6 +31,13 @@ object taskRead = readTasks.Invoke(null, null) ?? throw new InvalidOperationExce
 await (Task)taskRead;
 object[] activeTasks = ((IEnumerable)(taskRead.GetType().GetProperty("Result")?.GetValue(taskRead)
     ?? throw new InvalidOperationException("Task result missing"))).Cast<object>().ToArray();
+foreach (object activeTask in activeTasks)
+{
+    string model = (string)(activeTask.GetType().GetProperty("CurrentModel")?.GetValue(activeTask) ?? "");
+    string effort = (string)(activeTask.GetType().GetProperty("CurrentEffort")?.GetValue(activeTask) ?? "");
+    if (model.Length == 0 || effort.Length == 0)
+        throw new InvalidOperationException("Active task model or reasoning effort is empty");
+}
 Console.WriteLine($"OK active tasks ({activeTasks.Length})");
 
 MethodInfo readQuota = monitorData.GetMethod("ReadQuotaAsync", BindingFlags.Static | BindingFlags.Public)

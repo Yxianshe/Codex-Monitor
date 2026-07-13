@@ -1,4 +1,4 @@
-# Codex Monitor V2.1.1
+# Codex Monitor V2.1.2
 
 V2 replaces the PowerShell/WPF visual layer with a native C# Avalonia + Skia renderer.
 
@@ -16,6 +16,7 @@ V2 replaces the PowerShell/WPF visual layer with a native C# Avalonia + Skia ren
 - Reads 5-hour and weekly limits from `codex app-server --stdio`.
 - Reads the model catalog dynamically with `model/list`.
 - Reads `config/read` and uses `config/batchWrite` only when the user changes the new-task default model or reasoning level. Running-task badges are read-only because another client cannot safely hot-switch an in-progress turn.
+- Starts in English and provides a one-click Chinese/English switch; model and effort dropdown items always show both their color marker and readable label.
 
 ## Build
 

@@ -177,11 +177,11 @@ internal static class MonitorData
                     },
                     reloadUserConfig = true
                 });
-            return new SettingsUpdateResult(true, "新任务默认模型已保存");
+            return new SettingsUpdateResult(true, "");
         }
         catch (Exception error)
         {
-            return new SettingsUpdateResult(false, $"默认模型保存失败：{error.Message}");
+            return new SettingsUpdateResult(false, error.Message);
         }
         finally
         {
@@ -251,7 +251,7 @@ internal static class MonitorData
             "initialize",
             new
             {
-                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.1" },
+                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.2" },
                 capabilities
             });
         await WriteMessageAsync(process, new { jsonrpc = "2.0", method = "initialized", @params = new { } });
@@ -342,36 +342,66 @@ internal static class MonitorData
             string text = Encoding.UTF8.GetString(bytes, 0, read) + suffix;
             scanned += read;
 
-            if (active is null)
+            string[] lines = text.Split('\n');
+            int firstCompleteLine = position > 0 ? 1 : 0;
+            for (int index = lines.Length - 1; index >= firstCompleteLine; index--)
             {
-                int start = text.LastIndexOf("\"type\":\"task_started\"", StringComparison.Ordinal);
-                int complete = text.LastIndexOf("\"type\":\"task_complete\"", StringComparison.Ordinal);
-                int aborted = text.LastIndexOf("\"type\":\"turn_aborted\"", StringComparison.Ordinal);
-                if (start >= 0 || complete >= 0 || aborted >= 0) active = start > Math.Max(complete, aborted);
+                ReadRuntimeLine(lines[index], ref active, ref model, ref effort, ref tier);
+                if (active == false || active == true && model.Length > 0 && effort.Length > 0) break;
             }
 
-            int settings = text.LastIndexOf("\"type\":\"thread_settings_applied\"", StringComparison.Ordinal);
-            if (settings >= 0)
-            {
-                string snippet = text.Substring(settings, Math.Min(8192, text.Length - settings));
-                model = JsonField(snippet, "model");
-                effort = JsonField(snippet, "reasoning_effort");
-                tier = JsonField(snippet, "service_tier");
-                if (tier.Length == 0) tier = "default";
-            }
-            suffix = text[..Math.Min(8192, text.Length)];
+            suffix = position > 0 && lines.Length > 0 && lines[0].Length <= 8 * 1024 * 1024
+                ? lines[0]
+                : "";
         }
         return new RuntimeState(active == true, model, effort, tier);
     }
 
-    private static string JsonField(string text, string name)
+    private static void ReadRuntimeLine(
+        string line,
+        ref bool? active,
+        ref string model,
+        ref string effort,
+        ref string tier)
     {
-        string marker = $"\"{name}\":\"";
-        int start = text.IndexOf(marker, StringComparison.Ordinal);
-        if (start < 0) return "";
-        start += marker.Length;
-        int end = text.IndexOf('"', start);
-        return end > start ? text[start..end] : "";
+        if (string.IsNullOrWhiteSpace(line)) return;
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(line.TrimEnd('\r'));
+            JsonElement root = document.RootElement;
+            string rootType = GetString(root, "type");
+            JsonElement payload = root.TryGetProperty("payload", out JsonElement value) ? value : root;
+            string eventType = rootType == "event_msg" ? GetString(payload, "type") : rootType;
+
+            if (active is null)
+            {
+                if (eventType == "task_started") active = true;
+                else if (eventType is "task_complete" or "turn_aborted") active = false;
+            }
+
+            if (rootType == "turn_context" && model.Length == 0)
+            {
+                model = GetString(payload, "model");
+                effort = GetString(payload, "effort");
+                tier = GetString(payload, "service_tier");
+                if (effort.Length == 0
+                    && payload.TryGetProperty("collaboration_mode", out JsonElement collaboration)
+                    && collaboration.TryGetProperty("settings", out JsonElement settings))
+                    effort = GetString(settings, "reasoning_effort");
+            }
+            else if (eventType == "thread_settings_applied" && model.Length == 0)
+            {
+                model = GetString(payload, "model");
+                effort = GetString(payload, "reasoning_effort");
+                tier = GetString(payload, "service_tier");
+            }
+
+            if (tier.Length == 0) tier = "default";
+        }
+        catch (JsonException)
+        {
+            // Ignore a partially written final JSONL record and retry on the next refresh.
+        }
     }
 
     private static string HexToString(string hex)
