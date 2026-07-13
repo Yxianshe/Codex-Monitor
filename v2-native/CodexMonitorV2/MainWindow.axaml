@@ -101,18 +101,35 @@
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
-    <Style Selector="ListBox#TaskList > ListBoxItem">
+    <Style Selector="ListBox#TaskList ListBoxItem">
       <Setter Property="Padding" Value="0"/>
       <Setter Property="Margin" Value="0"/>
       <Setter Property="CornerRadius" Value="13"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="FocusAdorner" Value="{x:Null}"/>
     </Style>
-    <Style Selector="ListBox#TaskList > ListBoxItem:pointerover">
-      <Setter Property="Background" Value="#18FFFFFF"/>
+    <Style Selector="ListBox#TaskList ListBoxItem:pointerover">
+      <Setter Property="Background" Value="#0CFFFFFF"/>
     </Style>
-    <Style Selector="ListBox#TaskList > ListBoxItem:selected">
-      <Setter Property="Background" Value="#32FFFFFF"/>
+    <Style Selector="ListBox#TaskList ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox#TaskList ListBoxItem:selected:pointerover">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Border.taskRow">
+      <Setter Property="Background" Value="#0EFFFFFF"/>
+      <Setter Property="BorderBrush" Value="#46FFFFFF"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+    <Style Selector="ListBox#TaskList ListBoxItem:pointerover Border.taskRow">
+      <Setter Property="Background" Value="#18FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#72FFFFFF"/>
+    </Style>
+    <Style Selector="ListBox#TaskList ListBoxItem:selected Border.taskRow">
+      <Setter Property="Background" Value="#30FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#A8FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
     </Style>
   </Window.Styles>
 
@@ -231,7 +248,7 @@
             <ListBox x:Name="TaskList" ItemsSource="{Binding Tasks}">
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#11030914" BorderBrush="#46FFFFFF" BorderThickness="0,0,0,1"
+                  <Border Classes="taskRow"
                           CornerRadius="13" Padding="10,7" Margin="1,1"
                           ToolTip.Tip="{Binding CurrentSummary}">
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
