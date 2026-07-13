@@ -29,6 +29,11 @@ public sealed partial class MainWindow : Window
     private bool? _manualIsDay;
     private IReadOnlyList<MonitorData.ModelDescriptor> _models = Array.Empty<MonitorData.ModelDescriptor>();
     private double _flowPhase;
+    private double _scenePhase;
+    private readonly ScaleTransform _sceneScale = new();
+    private readonly RotateTransform _sceneRotate = new();
+    private readonly TranslateTransform _sceneTranslate = new();
+    private readonly bool _animationsEnabled;
     private bool _syncingDefaults;
     private int _defaultChangeVersion;
     private readonly SemaphoreSlim _defaultWriteGate = new(1, 1);
@@ -37,6 +42,8 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = this;
+        _animationsEnabled = Environment.GetEnvironmentVariable("CODEX_MONITOR_REDUCE_MOTION") != "1"
+            && ClientAreaAnimationsEnabled();
         _isEnglish = !string.Equals(
             Environment.GetEnvironmentVariable("CODEX_MONITOR_LANGUAGE"),
             "zh",
@@ -49,6 +56,13 @@ public sealed partial class MainWindow : Window
             _ => null
         };
         _flowBorderBrush = CreateFlowBorderBrush();
+        TransformGroup sceneTransform = new();
+        sceneTransform.Children.Add(_sceneScale);
+        sceneTransform.Children.Add(_sceneRotate);
+        sceneTransform.Children.Add(_sceneTranslate);
+        Image backdrop = this.FindControl<Image>("BackdropImage")!;
+        backdrop.RenderTransformOrigin = new RelativePoint(0.08, 0.5, RelativeUnit.Relative);
+        backdrop.RenderTransform = sceneTransform;
         foreach (string name in new[] { "TokenButton", "ThemeButton", "LanguageButton", "PinButton", "MinimizeButton", "CloseButton" })
             this.FindControl<Button>(name)!.BorderBrush = _flowBorderBrush;
         this.FindControl<ListBox>("TaskList")!.SelectionChanged += (_, _) => SelectedTaskChanged();
@@ -117,10 +131,23 @@ public sealed partial class MainWindow : Window
 
     private void TickGlassAnimation()
     {
-        if (!IsVisible || WindowState == WindowState.Minimized) return;
+        if (!_animationsEnabled || !IsVisible || WindowState == WindowState.Minimized) return;
         _flowPhase = (_flowPhase + 1.0 / 240.0) % 1.0;
         _flowBorderBrush.Angle = _flowPhase * 360.0;
         this.FindControl<LiquidGlassSurface>("GlassPanel")!.FlowPhase = _flowPhase;
+
+        if (_sceneBitmap is null) return;
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        _scenePhase = (_scenePhase + 1.0 / (isDay ? 840.0 : 1120.0)) % 1.0;
+        double radians = _scenePhase * Math.PI * 2;
+        double breath = Math.Sin(radians);
+        double baseScaleX = isDay ? 1.06 : 1.0;
+        double baseScaleY = isDay ? 1.02 : 1.0;
+        _sceneScale.ScaleX = baseScaleX + breath * (isDay ? 0.008 : 0.006);
+        _sceneScale.ScaleY = baseScaleY + breath * (isDay ? 0.006 : 0.005);
+        _sceneTranslate.X = Math.Sin(radians * 0.73) * (isDay ? 3.6 : 2.4);
+        _sceneTranslate.Y = Math.Cos(radians * 0.91) * (isDay ? 2.2 : 1.8);
+        _sceneRotate.Angle = Math.Sin(radians * 0.57) * (isDay ? 0.20 : 0.12);
     }
 
     private async Task CapturePreviewIfRequestedAsync()
@@ -302,8 +329,11 @@ public sealed partial class MainWindow : Window
         Bitmap next = new(AssetLoader.Open(uri));
         Image backdrop = this.FindControl<Image>("BackdropImage")!;
         backdrop.Source = next;
-        backdrop.RenderTransformOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative);
-        backdrop.RenderTransform = new ScaleTransform(isDay ? 1.06 : 1.0, isDay ? 1.02 : 1.0);
+        _sceneScale.ScaleX = isDay ? 1.06 : 1.0;
+        _sceneScale.ScaleY = isDay ? 1.02 : 1.0;
+        _sceneRotate.Angle = 0;
+        _sceneTranslate.X = 0;
+        _sceneTranslate.Y = 0;
 
         Color lensTint = Color.Parse(isDay ? "#140D0502" : "#0C020A18");
         this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;
@@ -510,8 +540,16 @@ public sealed partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SystemParametersInfo(uint action, uint parameter, ref bool value, uint flags);
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
+
+    private static bool ClientAreaAnimationsEnabled()
+    {
+        bool enabled = true;
+        return !SystemParametersInfo(0x1042, 0, ref enabled, 0) || enabled;
+    }
 }
 
 public sealed class TaskRow : INotifyPropertyChanged
