@@ -329,7 +329,9 @@ public sealed partial class MainWindow : Window
     {
         nint hwnd = TryGetPlatformHandle()?.Handle ?? 0;
         if (hwnd == 0) return;
-        int rounded = 1;
+        int nonClientRenderingDisabled = 1;
+        DwmSetWindowAttribute(hwnd, 2, ref nonClientRenderingDisabled, sizeof(int));
+        int rounded = 2;
         DwmSetWindowAttribute(hwnd, 33, ref rounded, sizeof(int));
         int noSystemBorder = unchecked((int)0xFFFFFFFE);
         DwmSetWindowAttribute(hwnd, 34, ref noSystemBorder, sizeof(int));
@@ -383,6 +385,11 @@ public sealed partial class MainWindow : Window
         Bitmap next = new(AssetLoader.Open(uri));
         Image backdrop = this.FindControl<Image>("BackdropImage")!;
         backdrop.Source = next;
+
+        // Remote-desktop compositors can clear fully transparent rounded corners to white.
+        // A scene-matched opaque fallback sits only behind the shared rounded clip; DWM still
+        // owns the final antialiased window silhouette.
+        Background = new SolidColorBrush(Color.Parse(isDay ? "#FF35170C" : "#FF071426"));
 
         Color lensTint = Color.Parse(isDay ? "#140D0502" : "#0C020A18");
         this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;

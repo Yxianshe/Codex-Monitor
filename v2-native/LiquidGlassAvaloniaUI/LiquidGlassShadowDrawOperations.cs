@@ -85,12 +85,22 @@ namespace LiquidGlassAvaloniaUI
             SKRect rect = SKRect.Create(0, 0, size.Width, size.Height);
 
             using SKPath path = LiquidGlassPathUtils.CreateRoundRectPath(rect, cornerRadii);
-            using SKMaskFilter? blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, radius);
+            // A physical convex lens needs two shadow scales: broad ambient occlusion lifts the
+            // pane from its backdrop, while a tighter displaced contact shadow describes the
+            // lower/right glass thickness. A single blur reads as either a hard outline or haze.
+            using SKMaskFilter? ambientBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, radius * 1.15f);
+            using SKMaskFilter? contactBlur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Math.Max(1.0f, radius * 0.55f));
 
-            using SKPaint shadowPaint = new()
+            using SKPaint ambientPaint = new()
             {
-                Color = new SKColor(color.R, color.G, color.B, alpha),
-                MaskFilter = blur,
+                Color = new SKColor(color.R, color.G, color.B, (byte)Math.Max(1, alpha * 0.44f)),
+                MaskFilter = ambientBlur,
+                IsAntialias = true
+            };
+            using SKPaint contactPaint = new()
+            {
+                Color = new SKColor(color.R, color.G, color.B, (byte)Math.Max(1, alpha * 0.86f)),
+                MaskFilter = contactBlur,
                 IsAntialias = true
             };
 
@@ -106,8 +116,13 @@ namespace LiquidGlassAvaloniaUI
             canvas.SaveLayer(layerBounds, null);
 
             canvas.Save();
+            canvas.Translate(offsetX * 0.35f, offsetY * 0.35f);
+            canvas.DrawPath(path, ambientPaint);
+            canvas.Restore();
+
+            canvas.Save();
             canvas.Translate(offsetX, offsetY);
-            canvas.DrawPath(path, shadowPaint);
+            canvas.DrawPath(path, contactPaint);
             canvas.Restore();
 
             canvas.DrawPath(path, clearPaint);

@@ -8,7 +8,7 @@
         Width="550" Height="460" MinWidth="500" MinHeight="420"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="None" CanResize="True"
-        Background="Transparent" TransparencyLevelHint="Transparent"
+        Background="#FF35170C" TransparencyLevelHint="Transparent"
         TextOptions.TextRenderingMode="Antialias"
         TextOptions.TextHintingMode="Strong"
         TextOptions.BaselinePixelAlignment="Aligned"
@@ -33,12 +33,19 @@
         <ControlTemplate>
           <Grid ClipToBounds="False">
             <glass:LiquidGlassSurface IsHitTestVisible="False"
-                                      CornerRadius="16" RefractionHeight="10" Refraction="9"
-                                      DepthEffect="True" Depth="0.78"
-                                      ChromaticAberration="True" Dispersion="0.48"
-                                      Frost="0.35" Splay="2.2" Light="0.92"
-                                      BackdropOpacity="0.98" SurfaceColor="#0DFFFFFF"
-                                      HighlightEnabled="False" ShadowEnabled="False"/>
+                                      CornerRadius="16" RefractionHeight="12" Refraction="12"
+                                      DepthEffect="True" Depth="1.05"
+                                      ChromaticAberration="True" Dispersion="0.10"
+                                      Frost="0.18" Splay="2.80" Light="1.15"
+                                      BackdropOpacity="0.90" SurfaceColor="#06FFFFFF"
+                                      HighlightEnabled="True" HighlightWidth="0.55"
+                                      HighlightBlurRadius="0.45" HighlightOpacity="0.62"
+                                      HighlightAngle="-42" HighlightFalloff="1.40"
+                                      ShadowEnabled="True" ShadowRadius="6" ShadowOffset="1,3"
+                                      ShadowColor="#50000000" ShadowOpacity="0.68"
+                                      InnerShadowEnabled="True" InnerShadowRadius="5"
+                                      InnerShadowOffset="-1,-2" InnerShadowColor="#30000000"
+                                      InnerShadowOpacity="0.50"/>
             <Border CornerRadius="{TemplateBinding CornerRadius}"
                     Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
@@ -215,10 +222,10 @@
                                   HighlightFalloff="1.35"
                                   ShadowEnabled="False"
                                   InnerShadowEnabled="True"
-                                  InnerShadowRadius="14"
-                                  InnerShadowOffset="0,3"
-                                  InnerShadowColor="#18000000"
-                                  InnerShadowOpacity="0.52"/>
+                                  InnerShadowRadius="16"
+                                  InnerShadowOffset="-1,-4"
+                                  InnerShadowColor="#38000000"
+                                  InnerShadowOpacity="0.72"/>
       </Grid>
     </Border>
     <Border x:Name="ForegroundLayer" Margin="18" Background="#06020710" CornerRadius="18"
@@ -299,11 +306,11 @@
                                     HighlightEnabled="True" HighlightWidth="0.75"
                                     HighlightBlurRadius="0.60" HighlightOpacity="0.68"
                                     HighlightAngle="-42" HighlightFalloff="1.40"
-                                    ShadowEnabled="True" ShadowRadius="10" ShadowOffset="0,4"
-                                    ShadowColor="#16000000" ShadowOpacity="0.54"
-                                    InnerShadowEnabled="True" InnerShadowRadius="10"
-                                    InnerShadowOffset="0,2" InnerShadowColor="#14000000"
-                                    InnerShadowOpacity="0.45"/>
+                                    ShadowEnabled="True" ShadowRadius="12" ShadowOffset="1,5"
+                                    ShadowColor="#60000000" ShadowOpacity="0.78"
+                                    InnerShadowEnabled="True" InnerShadowRadius="11"
+                                    InnerShadowOffset="-1,-3" InnerShadowColor="#30000000"
+                                    InnerShadowOpacity="0.58"/>
           <ScrollViewer x:Name="TaskScrollViewer" Margin="14,10"
                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <ListBox x:Name="TaskList" ItemsSource="{Binding Tasks}">
@@ -379,11 +386,11 @@
                                     HighlightEnabled="True" HighlightWidth="0.75"
                                     HighlightBlurRadius="0.60" HighlightOpacity="0.68"
                                     HighlightAngle="-42" HighlightFalloff="1.40"
-                                    ShadowEnabled="True" ShadowRadius="10" ShadowOffset="0,4"
-                                    ShadowColor="#16000000" ShadowOpacity="0.54"
-                                    InnerShadowEnabled="True" InnerShadowRadius="10"
-                                    InnerShadowOffset="0,2" InnerShadowColor="#14000000"
-                                    InnerShadowOpacity="0.45"/>
+                                    ShadowEnabled="True" ShadowRadius="12" ShadowOffset="1,5"
+                                    ShadowColor="#60000000" ShadowOpacity="0.78"
+                                    InnerShadowEnabled="True" InnerShadowRadius="11"
+                                    InnerShadowOffset="-1,-3" InnerShadowColor="#30000000"
+                                    InnerShadowOpacity="0.58"/>
           <Grid Margin="20,10" RowDefinitions="64,1,64">
             <Grid ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
