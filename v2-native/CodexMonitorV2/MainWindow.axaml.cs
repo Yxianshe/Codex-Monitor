@@ -6,8 +6,6 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
-using Avalonia.Rendering.Composition;
-using Avalonia.Rendering.Composition.Animations;
 using Avalonia.Threading;
 using LiquidGlassAvaloniaUI;
 using System.Collections.ObjectModel;
@@ -30,23 +28,17 @@ public sealed partial class MainWindow : Window
     private MonitorData.QuotaSnapshot? _lastQuota;
     private bool? _manualIsDay;
     private IReadOnlyList<MonitorData.ModelDescriptor> _models = Array.Empty<MonitorData.ModelDescriptor>();
-    private CompositionVisual? _sceneVisual;
-    private readonly bool _animationsEnabled;
     private bool _syncingDefaults;
     private int _defaultChangeVersion;
     private readonly SemaphoreSlim _defaultWriteGate = new(1, 1);
     private readonly SceneSettingsStore _sceneSettings = SceneSettingsStore.Load();
-    private readonly DispatcherTimer _sceneSettingsSaveTimer;
     private bool _syncingSceneControls;
-    private bool _nativeInteractionActive;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
         LiquidGlassBackdrop.SetIsLive(this, false);
-        _animationsEnabled = Environment.GetEnvironmentVariable("CODEX_MONITOR_REDUCE_MOTION") != "1"
-            && ClientAreaAnimationsEnabled();
         _isEnglish = !string.Equals(
             Environment.GetEnvironmentVariable("CODEX_MONITOR_LANGUAGE"),
             "zh",
@@ -62,8 +54,7 @@ public sealed partial class MainWindow : Window
         SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
         backdrop.SizeChanged += (_, _) =>
         {
-            UpdateSceneCenterPoint();
-            ApplySceneRestTransform();
+            ApplySceneLayoutTransform();
             RefreshGlassBackdrop();
         };
         foreach (string name in new[] { "SettingsButton", "TokenButton", "ThemeButton", "LanguageButton", "PinButton", "MinimizeButton", "CloseButton", "SettingsCloseButton" })
@@ -78,12 +69,6 @@ public sealed partial class MainWindow : Window
             ApplySceneBackground();
             await RefreshDataAsync();
         };
-        _sceneSettingsSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
-        _sceneSettingsSaveTimer.Tick += (_, _) =>
-        {
-            _sceneSettingsSaveTimer.Stop();
-            StartSceneCompositionAnimation();
-        };
         Opened += async (_, _) =>
         {
             ApplyNativeWindowMaterial();
@@ -94,21 +79,18 @@ public sealed partial class MainWindow : Window
             _models = await models;
             await InitializeDefaultSelectorsAsync();
             _dataTimer.Start();
-            StartSceneCompositionAnimation();
             await CapturePreviewIfRequestedAsync();
         };
         Closed += (_, _) =>
         {
             _dataTimer.Stop();
-            _sceneSettingsSaveTimer.Stop();
-            StopSceneCompositionAnimation();
             _sceneBitmap?.Dispose();
         };
 
         WireWindowGrips();
         this.FindControl<Button>("CloseButton")!.Click += (_, _) => Close();
         this.FindControl<Button>("MinimizeButton")!.Click += (_, _) => WindowState = WindowState.Minimized;
-        this.FindControl<Button>("PinButton")!.Click += (_, _) => Topmost = !Topmost;
+        this.FindControl<Button>("PinButton")!.Click += (_, _) => TogglePin();
         this.FindControl<Button>("TokenButton")!.Click += (_, _) =>
         {
             _showTokens = !_showTokens;
@@ -124,6 +106,7 @@ public sealed partial class MainWindow : Window
         this.FindControl<Slider>("SceneZoomSlider")!.ValueChanged += (_, _) => SceneControlsChanged();
         this.FindControl<Slider>("ScenePositionXSlider")!.ValueChanged += (_, _) => SceneControlsChanged();
         this.FindControl<Slider>("ScenePositionYSlider")!.ValueChanged += (_, _) => SceneControlsChanged();
+        UpdatePinVisual();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -141,70 +124,6 @@ public sealed partial class MainWindow : Window
             new(Color.Parse("#E6FFFFFF"), 1.00)
         }
     };
-
-    private void StartSceneCompositionAnimation()
-    {
-        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
-        _sceneVisual ??= ElementComposition.GetElementVisual(backdrop);
-        if (_sceneVisual is null) return;
-
-        StopSceneCompositionAnimation();
-        UpdateSceneCenterPoint();
-        ApplySceneLayoutTransform();
-
-        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
-        SceneMotionFrame rest = SampleSceneMotion(isDay, 0);
-        _sceneVisual.Scale = new Vector3D(rest.ScaleX, rest.ScaleY, 1);
-        _sceneVisual.Offset = new Vector3D(rest.X, rest.Y, 0);
-        _sceneVisual.RotationAngle = (float)rest.Rotation;
-        if (!_animationsEnabled || _nativeInteractionActive || WindowState == WindowState.Minimized) return;
-
-        TimeSpan duration = TimeSpan.FromSeconds(isDay ? 36 : 44);
-        Vector3DKeyFrameAnimation scale = _sceneVisual.Compositor.CreateVector3DKeyFrameAnimation();
-        Vector3DKeyFrameAnimation offset = _sceneVisual.Compositor.CreateVector3DKeyFrameAnimation();
-        ScalarKeyFrameAnimation rotation = _sceneVisual.Compositor.CreateScalarKeyFrameAnimation();
-        scale.Duration = offset.Duration = rotation.Duration = duration;
-        scale.IterationBehavior = offset.IterationBehavior = rotation.IterationBehavior = AnimationIterationBehavior.Forever;
-
-        const int steps = 64;
-        for (int i = 0; i <= steps; i++)
-        {
-            float progress = i / (float)steps;
-            SceneMotionFrame frame = SampleSceneMotion(isDay, progress);
-            scale.InsertKeyFrame(progress, new Vector3D(frame.ScaleX, frame.ScaleY, 1));
-            offset.InsertKeyFrame(progress, new Vector3D(frame.X, frame.Y, 0));
-            rotation.InsertKeyFrame(progress, (float)frame.Rotation);
-        }
-
-        _sceneVisual.StartAnimation("Scale", scale);
-        _sceneVisual.StartAnimation("Offset", offset);
-        _sceneVisual.StartAnimation("RotationAngle", rotation);
-    }
-
-    private void StopSceneCompositionAnimation()
-    {
-        _sceneVisual?.StopAnimation("Scale");
-        _sceneVisual?.StopAnimation("Offset");
-        _sceneVisual?.StopAnimation("RotationAngle");
-    }
-
-    private void UpdateSceneCenterPoint()
-    {
-        if (_sceneVisual is null) return;
-        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
-        _sceneVisual.CenterPoint = new Vector3D(backdrop.Bounds.Width * 0.5, backdrop.Bounds.Height * 0.5, 0);
-    }
-
-    private void ApplySceneRestTransform()
-    {
-        if (_sceneVisual is null) return;
-        ApplySceneLayoutTransform();
-        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
-        SceneMotionFrame rest = SampleSceneMotion(isDay, 0);
-        _sceneVisual.Scale = new Vector3D(rest.ScaleX, rest.ScaleY, 1);
-        _sceneVisual.Offset = new Vector3D(rest.X, rest.Y, 0);
-        _sceneVisual.RotationAngle = (float)rest.Rotation;
-    }
 
     private void ApplySceneLayoutTransform()
     {
@@ -224,51 +143,48 @@ public sealed partial class MainWindow : Window
             DispatcherPriority.Render);
     }
 
-    private static SceneMotionFrame SampleSceneMotion(bool isDay, double phase)
-    {
-        double angle = phase * Math.PI * 2;
-        double second = angle * 2;
-        double scale = 1.0 + Math.Sin(angle - 0.40) * (isDay ? 0.0040 : 0.0032)
-            + Math.Sin(second + 0.20) * 0.0012;
-        double x = Math.Sin(angle) * (isDay ? 1.6 : 1.3) + Math.Sin(second + 0.40) * 0.35;
-        double y = Math.Cos(angle) * (isDay ? 1.1 : 0.9) + Math.Sin(second - 0.60) * 0.25;
-        double rotation = Math.Sin(angle + 0.70) * (isDay ? 0.0012 : 0.0010);
-        return new SceneMotionFrame(scale, scale, x, y, rotation);
-    }
-
-    internal static bool SceneMotionSelfCheck()
-    {
-        foreach (bool isDay in new[] { false, true })
-        {
-            SceneMotionFrame first = SampleSceneMotion(isDay, 0);
-            SceneMotionFrame last = SampleSceneMotion(isDay, 1);
-            if (Math.Abs(first.ScaleX - last.ScaleX) > 0.000001
-                || Math.Abs(first.ScaleY - last.ScaleY) > 0.000001
-                || Math.Abs(first.X - last.X) > 0.000001
-                || Math.Abs(first.Y - last.Y) > 0.000001
-                || Math.Abs(first.Rotation - last.Rotation) > 0.000001)
-                return false;
-        }
-        return true;
-    }
-
-    private readonly record struct SceneMotionFrame(
-        double ScaleX,
-        double ScaleY,
-        double X,
-        double Y,
-        double Rotation);
-
     private async Task CapturePreviewIfRequestedAsync()
     {
         string? path = Environment.GetEnvironmentVariable("CODEX_MONITOR_CAPTURE");
         if (string.IsNullOrWhiteSpace(path)) return;
+
+        if (Environment.GetEnvironmentVariable("CODEX_MONITOR_CAPTURE_DEMO") == "1")
+            ApplyDemoPreviewData();
+        if (string.Equals(
+                Environment.GetEnvironmentVariable("CODEX_MONITOR_CAPTURE_VIEW"),
+                "settings",
+                StringComparison.OrdinalIgnoreCase))
+            ToggleSceneSettings(true);
+
         await Task.Delay(900);
         string? directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         using RenderTargetBitmap bitmap = new(PixelSize.FromSize(ClientSize, RenderScaling));
         bitmap.Render(this);
         bitmap.Save(path);
+    }
+
+    private void ApplyDemoPreviewData()
+    {
+        Tasks.Clear();
+        MonitorData.TaskSnapshot[] demoTasks =
+        {
+            new("demo-1", "Design liquid-glass dashboard", "gpt-5.6-sol", "xhigh", "priority", 128_460),
+            new("demo-2", "Refine Windows interaction", "gpt-5.6-luna", "high", "default", 86_240),
+            new("demo-3", "Prepare V2.1.3 release", "gpt-5.6-terra", "medium", "default", 52_810)
+        };
+        foreach (MonitorData.TaskSnapshot snapshot in demoTasks)
+            Tasks.Add(new TaskRow(snapshot, _isEnglish) { ShowTokens = _showTokens });
+
+        this.FindControl<ListBox>("TaskList")!.SelectedItem = Tasks[0];
+        UpdateStatusText();
+        this.FindControl<TextBlock>("UpdatedText")!.Text = $"{T("Updated", "更新")}：19:26:13";
+
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        _lastQuota = new MonitorData.QuotaSnapshot(
+            new MonitorData.WindowLimit(32, now + 2 * 3600 + 18 * 60, 300),
+            new MonitorData.WindowLimit(28, now + 5 * 86400 + 14 * 3600, 10080));
+        UpdateQuota(_lastQuota);
     }
 
     private async Task InitializeDefaultSelectorsAsync()
@@ -424,9 +340,6 @@ public sealed partial class MainWindow : Window
         nint hwnd = TryGetPlatformHandle()?.Handle ?? 0;
         if (hwnd == 0) return;
         bool resizing = hitTest >= 10;
-        _nativeInteractionActive = true;
-        StopSceneCompositionAnimation();
-        ApplySceneRestTransform();
         if (resizing) CanResize = true;
         try
         {
@@ -436,10 +349,7 @@ public sealed partial class MainWindow : Window
         finally
         {
             if (resizing) CanResize = false;
-            _nativeInteractionActive = false;
             ApplyNativeWindowMaterial();
-            UpdateSceneCenterPoint();
-            StartSceneCompositionAnimation();
             RefreshGlassBackdrop();
         }
     }
@@ -464,7 +374,7 @@ public sealed partial class MainWindow : Window
         _sceneIsDay = isDay;
         old?.Dispose();
         UpdateSceneSettingsControls();
-        StartSceneCompositionAnimation();
+        ApplySceneLayoutTransform();
         RefreshGlassBackdrop();
     }
 
@@ -522,11 +432,8 @@ public sealed partial class MainWindow : Window
         settings.PositionY = this.FindControl<Slider>("ScenePositionYSlider")!.Value / 100;
         UpdateSceneSettingValueLabels(settings);
         MarkSceneSettingsDirty();
-        StopSceneCompositionAnimation();
-        ApplySceneRestTransform();
+        ApplySceneLayoutTransform();
         RefreshGlassBackdrop();
-        _sceneSettingsSaveTimer.Stop();
-        _sceneSettingsSaveTimer.Start();
     }
 
     private void UpdateSceneSettingValueLabels(SceneViewSettings settings)
@@ -762,6 +669,9 @@ public sealed partial class MainWindow : Window
             T("Switch to Chinese", "切换到英文"));
         ToolTip.SetTip(this.FindControl<Button>("SettingsButton")!,
             T("Background settings", "背景设置"));
+        ToolTip.SetTip(this.FindControl<Button>("PinButton")!, Topmost
+            ? T("Unpin window", "取消置顶")
+            : T("Keep window on top", "窗口置顶"));
         UpdateSceneSettingsControls();
     }
 
@@ -780,6 +690,28 @@ public sealed partial class MainWindow : Window
         if (this.FindControl<Grid>("SceneSettingsOverlay")!.IsVisible) UpdateSceneSettingsControls();
     }
 
+    private void TogglePin()
+    {
+        Topmost = !Topmost;
+        UpdatePinVisual();
+    }
+
+    private void UpdatePinVisual()
+    {
+        bool pinned = Topmost;
+        this.FindControl<PathIcon>("PinIdleIcon")!.IsVisible = !pinned;
+        this.FindControl<PathIcon>("PinActiveIcon")!.IsVisible = pinned;
+        this.FindControl<Avalonia.Controls.Shapes.Ellipse>("PinActiveDot")!.IsVisible = pinned;
+        Button button = this.FindControl<Button>("PinButton")!;
+        if (pinned)
+            button.Background = new SolidColorBrush(Color.Parse("#5A68458E"));
+        else
+            button.ClearValue(Button.BackgroundProperty);
+        ToolTip.SetTip(button, pinned
+            ? T("Unpin window", "取消置顶")
+            : T("Keep window on top", "窗口置顶"));
+    }
+
     private void RefreshTaskDetails()
     {
         foreach (TaskRow row in Tasks) row.ShowTokens = _showTokens;
@@ -787,16 +719,8 @@ public sealed partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SystemParametersInfo(uint action, uint parameter, ref bool value, uint flags);
     [DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [DllImport("user32.dll")] private static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
-
-    private static bool ClientAreaAnimationsEnabled()
-    {
-        bool enabled = true;
-        return !SystemParametersInfo(0x1042, 0, ref enabled, 0) || enabled;
-    }
 }
 
 public sealed class TaskRow : INotifyPropertyChanged
@@ -827,6 +751,8 @@ public sealed class TaskRow : INotifyPropertyChanged
     public string TokenDetail => $"Σ {FormatTokens(_tokens)} Token";
     public bool TokenVisible => ShowTokens;
     public bool SettingsVisible => !ShowTokens;
+    public bool PriorityVisible => !ShowTokens && _tier.Equals("priority", StringComparison.OrdinalIgnoreCase);
+    public string PriorityTip => _isEnglish ? "Priority · 1.5× speed" : "优先通道 · 1.5× 速度";
     public string CurrentLabel { get; private set; } = "Current";
     public string CurrentSummary { get; private set; } = "";
     public string SelectionModel => _nextModel.Length > 0 ? _nextModel : _currentModel;
@@ -842,6 +768,7 @@ public sealed class TaskRow : INotifyPropertyChanged
             _showTokens = value;
             OnChanged(nameof(TokenVisible));
             OnChanged(nameof(SettingsVisible));
+            OnChanged(nameof(PriorityVisible));
         }
     }
 
@@ -902,6 +829,8 @@ public sealed class TaskRow : INotifyPropertyChanged
         OnChanged(nameof(ModelBackground));
         OnChanged(nameof(EffortAccent));
         OnChanged(nameof(EffortBackground));
+        OnChanged(nameof(PriorityVisible));
+        OnChanged(nameof(PriorityTip));
         OnChanged(nameof(CurrentLabel));
         OnChanged(nameof(CurrentSummary));
     }

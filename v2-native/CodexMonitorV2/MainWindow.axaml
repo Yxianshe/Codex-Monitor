@@ -90,19 +90,36 @@
     <Style Selector="ComboBox.taskChoice:pointerover">
       <Setter Property="BorderBrush" Value="#B8FFFFFF"/>
     </Style>
+    <Style Selector="ComboBox.taskChoice /template/ Border#PopupBorder">
+      <Setter Property="Background" Value="#86121B2A"/>
+      <Setter Property="BorderBrush" Value="#92FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="12"/>
+      <Setter Property="Padding" Value="4"/>
+    </Style>
+    <Style Selector="ComboBox.taskChoice /template/ ScrollViewer">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
     <Style Selector="ComboBoxItem">
       <Setter Property="MinHeight" Value="30"/>
       <Setter Property="Padding" Value="9,5"/>
-      <Setter Property="Background" Value="#F4F6F8FC"/>
-      <Setter Property="Foreground" Value="#FF172033"/>
+      <Setter Property="Margin" Value="3,2"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Background" Value="#2CFFFFFF"/>
+      <Setter Property="Foreground" Value="#F4FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#38FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="FocusAdorner" Value="{x:Null}"/>
     </Style>
     <Style Selector="ComboBoxItem:pointerover">
-      <Setter Property="Background" Value="#FFE4EBF7"/>
-      <Setter Property="Foreground" Value="#FF101827"/>
+      <Setter Property="Background" Value="#584E6A88"/>
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="BorderBrush" Value="#72FFFFFF"/>
     </Style>
     <Style Selector="ComboBoxItem:selected">
-      <Setter Property="Background" Value="#FFD7E4F8"/>
-      <Setter Property="Foreground" Value="#FF101827"/>
+      <Setter Property="Background" Value="#86518BC2"/>
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="BorderBrush" Value="#A8C9E6FF"/>
     </Style>
     <Style Selector="ListBox#TaskList">
       <Setter Property="Background" Value="Transparent"/>
@@ -294,10 +311,25 @@
             glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
         <Grid x:Name="TitleBar" ColumnDefinitions="*,Auto" Background="#01000000">
-          <StackPanel Spacing="1">
-            <TextBlock Text="C O D E X   M O N I T O R" FontSize="9" FontWeight="SemiBold" Foreground="#D8FFFFFF"/>
-            <TextBlock x:Name="MainTitleText" Text="Tasks &amp; Usage" FontSize="21" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-          </StackPanel>
+          <Grid ColumnDefinitions="34,*" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+            <Border Grid.RowSpan="2" Width="32" Height="32" CornerRadius="9"
+                    Background="#16FFFFFF" BorderBrush="#EFFFFFFF" BorderThickness="2"
+                    VerticalAlignment="Center">
+              <Grid Width="26" Height="26">
+                <Path Data="M19.8,8.2 C17.9,5.9 15.2,4.7 12.3,4.7 C7.2,4.7 3.3,8.6 3.3,13.2 C3.3,17.8 7.2,21.7 12.3,21.7 C16.7,21.7 20.2,18.9 21.1,15"
+                      Stroke="#FFFFFFFF" StrokeThickness="3.1" StrokeLineCap="Round"
+                      Fill="Transparent"/>
+                <Ellipse Width="4.4" Height="4.4" Fill="#FFFFFFFF"
+                         HorizontalAlignment="Right" VerticalAlignment="Center"
+                         Margin="0,-1,1.2,0"/>
+              </Grid>
+            </Border>
+            <TextBlock Grid.Column="1" Text="CODEX MONITOR" FontSize="10.5"
+                       FontWeight="Bold" LetterSpacing="0.7" Foreground="#EFFFFFFF"/>
+            <TextBlock x:Name="MainTitleText" Grid.Row="1" Grid.Column="1"
+                       Text="Tasks &amp; Usage" FontSize="16.5" FontWeight="Bold"
+                       Foreground="#FFFFFFFF" Margin="0,-1,0,0"/>
+          </Grid>
           <StackPanel Grid.Column="1" Orientation="Horizontal">
             <Button x:Name="SettingsButton" Classes="top" Width="34" Padding="0">
               <PathIcon Width="17" Height="17" Foreground="#FFFFFFFF"
@@ -318,8 +350,17 @@
               <TextBlock x:Name="LanguageButtonText" Text="中" Foreground="#FFFFFFFF" FontWeight="SemiBold"/>
             </Button>
             <Button x:Name="PinButton" Classes="top" Width="34" Padding="0">
-              <PathIcon Width="17" Height="17" Foreground="#FFFFFFFF"
-                        Data="M16,12 L16,4 L17,4 L17,2 L7,2 L7,4 L8,4 L8,12 L6,14 L6,16 L11,16 L11,22 L13,22 L13,16 L18,16 L18,14 Z"/>
+              <Grid Width="19" Height="19">
+                <PathIcon x:Name="PinIdleIcon" Width="16" Height="16" Foreground="#FFFFFFFF"
+                          Data="M16,12 L16,4 L17,4 L17,2 L7,2 L7,4 L8,4 L8,12 L6,14 L6,16 L11,16 L11,22 L13,22 L13,16 L18,16 L18,14 Z"/>
+                <PathIcon x:Name="PinActiveIcon" Width="16" Height="16" Foreground="#D3AEFF" IsVisible="False"
+                          RenderTransformOrigin="50%,50%"
+                          Data="M16,12 L16,4 L17,4 L17,2 L7,2 L7,4 L8,4 L8,12 L6,14 L6,16 L11,16 L11,22 L13,22 L13,16 L18,16 L18,14 Z">
+                  <PathIcon.RenderTransform><RotateTransform Angle="-38"/></PathIcon.RenderTransform>
+                </PathIcon>
+                <Ellipse x:Name="PinActiveDot" Width="5" Height="5" Fill="#C895FF" IsVisible="False"
+                         HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+              </Grid>
             </Button>
             <Button x:Name="MinimizeButton" Classes="top" Width="34" Padding="0">
               <Border Width="13" Height="2" CornerRadius="1" Background="#FFFFFFFF"/>
@@ -409,8 +450,11 @@
                               Background="#22FFFFFF" BorderThickness="0" CornerRadius="12" Padding="9,4">
                         <TextBlock Text="{Binding TokenDetail}" FontSize="11.5" Foreground="#F4FFFFFF"/>
                       </Border>
-                      <TextBlock Grid.Column="1" IsVisible="{Binding SettingsVisible}" Text="{Binding CurrentLabel}"
-                                 FontSize="9.5" Foreground="#C8FFFFFF" VerticalAlignment="Center"/>
+                      <PathIcon Grid.Column="1"
+                                IsVisible="{Binding PriorityVisible}"
+                                Width="9" Height="13" Foreground="#C89CFF"
+                                ToolTip.Tip="{Binding PriorityTip}"
+                                Data="M7,0 L1,7 L5,7 L3,14 L11,5 L7,5 Z"/>
                       <Border Grid.Column="2" Width="112" Height="27"
                               IsVisible="{Binding SettingsVisible}" Background="{Binding ModelBackground}"
                               BorderBrush="#42FFFFFF" BorderThickness="1" CornerRadius="13" Padding="8,0">
