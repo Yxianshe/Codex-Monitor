@@ -23,9 +23,7 @@ public sealed partial class MainWindow : Window
     private Bitmap? _sceneBitmap;
     private bool? _sceneIsDay;
     private bool _showTokens;
-    private bool _isEnglish = true;
     private DateTime _lastQuotaRefresh = DateTime.MinValue;
-    private MonitorData.QuotaSnapshot? _lastQuota;
     private bool? _manualIsDay;
     private IReadOnlyList<MonitorData.ModelDescriptor> _models = Array.Empty<MonitorData.ModelDescriptor>();
     private double _flowPhase;
@@ -37,11 +35,6 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = this;
-        _isEnglish = !string.Equals(
-            Environment.GetEnvironmentVariable("CODEX_MONITOR_LANGUAGE"),
-            "zh",
-            StringComparison.OrdinalIgnoreCase);
-        ApplyLanguage();
         _manualIsDay = Environment.GetEnvironmentVariable("CODEX_MONITOR_SCENE")?.ToLowerInvariant() switch
         {
             "day" => true,
@@ -49,7 +42,7 @@ public sealed partial class MainWindow : Window
             _ => null
         };
         _flowBorderBrush = CreateFlowBorderBrush();
-        foreach (string name in new[] { "TokenButton", "ThemeButton", "LanguageButton", "PinButton", "MinimizeButton", "CloseButton" })
+        foreach (string name in new[] { "TokenButton", "ThemeButton", "PinButton", "MinimizeButton", "CloseButton" })
             this.FindControl<Button>(name)!.BorderBrush = _flowBorderBrush;
         this.FindControl<ComboBox>("DefaultModelBox")!.SelectionChanged += (_, _) => DefaultModelChanged();
         this.FindControl<ComboBox>("DefaultEffortBox")!.SelectionChanged += (_, _) => ScheduleDefaultSettingsWrite();
@@ -95,7 +88,6 @@ public sealed partial class MainWindow : Window
             RefreshTaskDetails();
         };
         this.FindControl<Button>("ThemeButton")!.Click += (_, _) => ToggleScene();
-        this.FindControl<Button>("LanguageButton")!.Click += (_, _) => ToggleLanguage();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -136,21 +128,18 @@ public sealed partial class MainWindow : Window
 
     private async Task InitializeDefaultSelectorsAsync()
     {
-        MonitorData.DefaultSettings settings = await MonitorData.ReadDefaultSettingsAsync();
-        PopulateDefaultSelectors(settings.Model, settings.Effort);
-    }
-
-    private void PopulateDefaultSelectors(string modelId, string effortId)
-    {
         _syncingDefaults = true;
         ComboBox modelBox = this.FindControl<ComboBox>("DefaultModelBox")!;
-        ModelChoice[] choices = _models.Select(model => ModelChoice.From(model, _isEnglish)).ToArray();
+        ComboBox effortBox = this.FindControl<ComboBox>("DefaultEffortBox")!;
+        ModelChoice[] choices = _models.Select(ModelChoice.From).ToArray();
         modelBox.ItemsSource = choices;
-        ModelChoice? selected = choices.FirstOrDefault(item => item.Id.Equals(modelId, StringComparison.OrdinalIgnoreCase))
+
+        MonitorData.DefaultSettings settings = await MonitorData.ReadDefaultSettingsAsync();
+        ModelChoice? selected = choices.FirstOrDefault(item => item.Id.Equals(settings.Model, StringComparison.OrdinalIgnoreCase))
             ?? choices.FirstOrDefault(item => item.IsDefault)
             ?? choices.FirstOrDefault();
         modelBox.SelectedItem = selected;
-        RebuildDefaultEfforts(selected, effortId);
+        RebuildDefaultEfforts(selected, settings.Effort);
         UpdateDefaultChoiceColors();
         _syncingDefaults = false;
     }
@@ -204,9 +193,7 @@ public sealed partial class MainWindow : Window
             if (model is null || effort is null) return;
             MonitorData.SettingsUpdateResult result = await MonitorData.UpdateDefaultSettingsAsync(model.Id, effort.Id);
             if (version == _defaultChangeVersion)
-                this.FindControl<TextBlock>("StatusText")!.Text = result.Success
-                    ? T("Defaults saved", "默认设置已保存")
-                    : $"{T("Save failed", "保存失败")}: {result.Message}";
+                this.FindControl<TextBlock>("StatusText")!.Text = result.Message;
         }
         finally
         {
@@ -306,7 +293,7 @@ public sealed partial class MainWindow : Window
                 TaskRow? row = Tasks.FirstOrDefault(existing => existing.ThreadId == item.ThreadId);
                 if (row is null)
                 {
-                    row = new TaskRow(item, _isEnglish) { ShowTokens = _showTokens };
+                    row = new TaskRow(item) { ShowTokens = _showTokens };
                     Tasks.Add(row);
                 }
                 else
@@ -316,23 +303,21 @@ public sealed partial class MainWindow : Window
                 }
             }
 
-            UpdateStatusText();
-            this.FindControl<TextBlock>("UpdatedText")!.Text = $"{T("Updated", "更新")}：{DateTime.Now:HH:mm:ss}";
+            this.FindControl<TextBlock>("StatusText")!.Text = snapshots.Count == 0
+                ? "暂无正在调用的任务"
+                : $"正在调用 {snapshots.Count} 个任务";
+            this.FindControl<TextBlock>("UpdatedText")!.Text = $"更新：{DateTime.Now:HH:mm:ss}";
 
             if (DateTime.Now - _lastQuotaRefresh >= TimeSpan.FromSeconds(30))
             {
                 MonitorData.QuotaSnapshot? quota = await MonitorData.ReadQuotaAsync();
-                if (quota is not null)
-                {
-                    _lastQuota = quota;
-                    UpdateQuota(quota);
-                }
+                if (quota is not null) UpdateQuota(quota);
                 _lastQuotaRefresh = DateTime.Now;
             }
         }
         catch (Exception error)
         {
-            this.FindControl<TextBlock>("StatusText")!.Text = T("Read failed", "读取失败");
+            this.FindControl<TextBlock>("StatusText")!.Text = "读取失败";
             this.FindControl<TextBlock>("UpdatedText")!.Text = error.Message;
         }
         finally
@@ -352,7 +337,7 @@ public sealed partial class MainWindow : Window
             this.FindControl<RingGauge>("FiveResetRing")!,
             this.FindControl<TextBlock>("FiveResetValue")!,
             this.FindControl<TextBlock>("FiveResetCaption")!,
-            reset => _isEnglish ? $"{reset:MMM d HH:mm}" : $"{reset:M月d日 HH:mm}");
+            reset => $"{reset:M月d日 HH:mm}");
 
         UpdateQuotaRow(
             quota.Weekly,
@@ -363,10 +348,10 @@ public sealed partial class MainWindow : Window
             this.FindControl<RingGauge>("WeekResetRing")!,
             this.FindControl<TextBlock>("WeekResetValue")!,
             this.FindControl<TextBlock>("WeekResetCaption")!,
-            reset => _isEnglish ? $"{reset:MMM d HH:mm}" : $"{reset:M月d日 HH:mm}");
+            reset => $"{reset:M月d日 HH:mm}");
     }
 
-    private void UpdateQuotaRow(
+    private static void UpdateQuotaRow(
         MonitorData.WindowLimit? limit,
         double fallbackWindowMinutes,
         ProgressBar bar,
@@ -381,10 +366,10 @@ public sealed partial class MainWindow : Window
         {
             bar.Value = 0;
             valueText.Text = "--%";
-            quotaCaption.Text = T("Not available", "当前账户未提供");
+            quotaCaption.Text = "当前账户未提供";
             ring.Value = 0;
             resetValue.Text = "--";
-            resetCaption.Text = T("No date", "暂无日期");
+            resetCaption.Text = "暂无日期";
             return;
         }
 
@@ -392,12 +377,12 @@ public sealed partial class MainWindow : Window
         int remaining = (int)Math.Round(100 - used);
         bar.Value = remaining;
         valueText.Text = $"{remaining}%";
-        quotaCaption.Text = $"{T("Used", "已用")} {(int)Math.Round(used)}%";
+        quotaCaption.Text = $"已用 {(int)Math.Round(used)}%";
         if (limit.ResetsAt <= 0)
         {
             ring.Value = 0;
             resetValue.Text = "--";
-            resetCaption.Text = T("No date", "暂无日期");
+            resetCaption.Text = "暂无日期";
             return;
         }
 
@@ -408,58 +393,16 @@ public sealed partial class MainWindow : Window
         resetCaption.Text = formatReset(DateTimeOffset.FromUnixTimeSeconds(limit.ResetsAt).LocalDateTime);
     }
 
-    private string FormatCountdown(long seconds)
+    private static string FormatCountdown(long seconds)
     {
-        if (seconds <= 0) return T("Soon", "即将");
+        if (seconds <= 0) return "即将";
         long days = seconds / 86400;
         long hours = seconds % 86400 / 3600;
         long minutes = seconds % 3600 / 60;
-        if (days > 0) return _isEnglish ? $"{days}d {hours}h" : $"{days}天 {hours}时";
-        if (hours > 0) return _isEnglish ? $"{hours}h {minutes}m" : $"{hours}时 {minutes}分";
-        return _isEnglish ? $"{Math.Max(1, minutes)}m" : $"{Math.Max(1, minutes)}分";
+        if (days > 0) return $"{days}天 {hours}时";
+        if (hours > 0) return $"{hours}时 {minutes}分";
+        return $"{Math.Max(1, minutes)}分";
     }
-
-    private void ToggleLanguage()
-    {
-        string modelId = (this.FindControl<ComboBox>("DefaultModelBox")!.SelectedItem as ModelChoice)?.Id ?? "";
-        string effortId = (this.FindControl<ComboBox>("DefaultEffortBox")!.SelectedItem as EffortChoice)?.Id ?? "";
-        _isEnglish = !_isEnglish;
-        ApplyLanguage();
-        PopulateDefaultSelectors(modelId, effortId);
-        foreach (TaskRow row in Tasks) row.SetLanguage(_isEnglish);
-        UpdateStatusText();
-        if (_lastQuota is not null) UpdateQuota(_lastQuota);
-    }
-
-    private void ApplyLanguage()
-    {
-        this.FindControl<TextBlock>("MainTitleText")!.Text = T("Tasks & Usage", "任务与使用量");
-        this.FindControl<TextBlock>("ActiveTasksLabel")!.Text = T("Active tasks", "正在调用的任务");
-        this.FindControl<TextBlock>("DefaultLabel")!.Text = T("New", "新建");
-        this.FindControl<TextBlock>("UsageTitleText")!.Text = T("Usage", "使用量概览");
-        this.FindControl<TextBlock>("FiveTitleText")!.Text = T("5 hours", "5 小时");
-        this.FindControl<TextBlock>("FiveWindowText")!.Text = T("Limit window", "限额周期");
-        this.FindControl<TextBlock>("FiveRemainingText")!.Text = T("Remaining", "剩余额度");
-        this.FindControl<TextBlock>("FiveResetTitleText")!.Text = T("Reset", "重置");
-        this.FindControl<TextBlock>("FiveNextDateText")!.Text = T("Next date", "下次日期");
-        this.FindControl<TextBlock>("WeekTitleText")!.Text = T("Weekly", "每周");
-        this.FindControl<TextBlock>("WeekWindowText")!.Text = T("Limit window", "限额周期");
-        this.FindControl<TextBlock>("WeekRemainingText")!.Text = T("Remaining", "剩余额度");
-        this.FindControl<TextBlock>("WeekResetTitleText")!.Text = T("Reset", "重置");
-        this.FindControl<TextBlock>("WeekNextDateText")!.Text = T("Next date", "下次日期");
-        this.FindControl<TextBlock>("LanguageButtonText")!.Text = _isEnglish ? "中" : "EN";
-        ToolTip.SetTip(this.FindControl<StackPanel>("DefaultSettingsPanel")!,
-            T("Set defaults for new Codex tasks; active turns remain unchanged",
-              "设置 Codex 新任务默认值；正在生成的回合不会改变"));
-        ToolTip.SetTip(this.FindControl<Button>("LanguageButton")!,
-            T("Switch to Chinese", "切换到英文"));
-    }
-
-    private void UpdateStatusText() => this.FindControl<TextBlock>("StatusText")!.Text = Tasks.Count == 0
-        ? T("No active tasks", "暂无正在调用的任务")
-        : _isEnglish ? $"{Tasks.Count} active" : $"正在调用 {Tasks.Count} 个任务";
-
-    private string T(string english, string chinese) => _isEnglish ? english : chinese;
 
     private void ToggleScene()
     {
@@ -483,14 +426,9 @@ public sealed partial class MainWindow : Window
 public sealed class TaskRow : INotifyPropertyChanged
 {
     private long _tokens;
-    private bool _isEnglish;
-    private string _currentModel = "";
-    private string _currentEffort = "";
-    private string _tier = "default";
 
-    internal TaskRow(MonitorData.TaskSnapshot snapshot, bool isEnglish)
+    internal TaskRow(MonitorData.TaskSnapshot snapshot)
     {
-        _isEnglish = isEnglish;
         ThreadId = snapshot.ThreadId;
         Update(snapshot);
     }
@@ -506,7 +444,6 @@ public sealed class TaskRow : INotifyPropertyChanged
     public string TokenDetail => $"Σ {FormatTokens(_tokens)} Token";
     public bool TokenVisible => ShowTokens;
     public bool SettingsVisible => !ShowTokens;
-    public string CurrentLabel { get; private set; } = "Current";
     public string CurrentSummary { get; private set; } = "";
 
     private bool _showTokens;
@@ -531,40 +468,22 @@ public sealed class TaskRow : INotifyPropertyChanged
         }
         _tokens = snapshot.Tokens;
         OnChanged(nameof(TokenDetail));
-        _currentModel = snapshot.CurrentModel;
-        _currentEffort = snapshot.CurrentEffort;
-        _tier = snapshot.Tier;
-        ApplyLocalizedValues();
-    }
 
-    internal void SetLanguage(bool isEnglish)
-    {
-        if (_isEnglish == isEnglish) return;
-        _isEnglish = isEnglish;
-        ApplyLocalizedValues();
-    }
-
-    private void ApplyLocalizedValues()
-    {
-        ModelChoice model = ModelChoice.Fallback(_currentModel, _isEnglish);
-        EffortChoice effort = EffortChoice.From(_currentEffort, _isEnglish);
+        ModelChoice model = ModelChoice.Fallback(snapshot.CurrentModel);
+        EffortChoice effort = EffortChoice.From(snapshot.CurrentEffort);
         ModelDisplay = model.DisplayName;
         EffortDisplay = effort.DisplayName;
         ModelAccent = model.Accent;
         ModelBackground = model.Background;
         EffortAccent = effort.Accent;
         EffortBackground = effort.Background;
-        CurrentLabel = _isEnglish ? "Current" : "当前";
-        CurrentSummary = _isEnglish
-            ? $"Current turn: {ModelDisplay} · {EffortDisplay}{(_tier == "priority" ? " · Priority" : "")}"
-            : $"当前回合：{ModelDisplay} · {EffortDisplay}{(_tier == "priority" ? " · Priority" : "")}";
+        CurrentSummary = $"当前回合：{ModelDisplay} · {EffortDisplay}{(snapshot.Tier == "priority" ? " · Priority" : "")}";
         OnChanged(nameof(ModelDisplay));
         OnChanged(nameof(EffortDisplay));
         OnChanged(nameof(ModelAccent));
         OnChanged(nameof(ModelBackground));
         OnChanged(nameof(EffortAccent));
         OnChanged(nameof(EffortBackground));
-        OnChanged(nameof(CurrentLabel));
         OnChanged(nameof(CurrentSummary));
     }
 
@@ -610,19 +529,18 @@ public sealed class ModelChoice
     public IBrush Accent { get; }
     public IBrush Background { get; }
 
-    internal static ModelChoice From(MonitorData.ModelDescriptor model, bool isEnglish) => new(
+    internal static ModelChoice From(MonitorData.ModelDescriptor model) => new(
         model.Id,
         model.DisplayName,
         model.DefaultEffort,
-        model.Efforts.Select(item => EffortChoice.From(item.Id, isEnglish)).ToArray(),
+        model.Efforts.Select(item => EffortChoice.From(item.Id)).ToArray(),
         model.IsDefault);
 
-    internal static ModelChoice Fallback(string model, bool isEnglish) => new(
+    internal static ModelChoice Fallback(string model) => new(
         model,
         PrettyName(model),
         "medium",
-        new[] { "low", "medium", "high", "xhigh", "max", "ultra" }
-            .Select(item => EffortChoice.From(item, isEnglish)).ToArray(),
+        new[] { "low", "medium", "high", "xhigh", "max", "ultra" }.Select(EffortChoice.From).ToArray(),
         false);
 
     private static string PrettyName(string model)
@@ -668,15 +586,15 @@ public sealed class EffortChoice
     public IBrush Accent { get; }
     public IBrush Background { get; }
 
-    internal static EffortChoice From(string effort, bool isEnglish) => effort.ToLowerInvariant() switch
+    internal static EffortChoice From(string effort) => effort.ToLowerInvariant() switch
     {
-        "minimal" => new("minimal", isEnglish ? "Minimal" : "最低", Color.Parse("#9AA6B6")),
-        "low" => new("low", isEnglish ? "Low" : "低", Color.Parse("#66AFFF")),
-        "medium" => new("medium", isEnglish ? "Medium" : "中", Color.Parse("#58C7A7")),
-        "high" => new("high", isEnglish ? "High" : "高", Color.Parse("#F2B55F")),
-        "xhigh" => new("xhigh", isEnglish ? "X-High" : "极高", Color.Parse("#F08B68")),
-        "max" => new("max", isEnglish ? "Max" : "最高", Color.Parse("#D878E8")),
-        "ultra" => new("ultra", isEnglish ? "Ultra" : "超高", Color.Parse("#9B8CFF")),
+        "minimal" => new("minimal", "最低", Color.Parse("#9AA6B6")),
+        "low" => new("low", "低", Color.Parse("#66AFFF")),
+        "medium" => new("medium", "中", Color.Parse("#58C7A7")),
+        "high" => new("high", "高", Color.Parse("#F2B55F")),
+        "xhigh" => new("xhigh", "极高", Color.Parse("#F08B68")),
+        "max" => new("max", "最高", Color.Parse("#D878E8")),
+        "ultra" => new("ultra", "超高", Color.Parse("#9B8CFF")),
         _ => new(effort, string.IsNullOrWhiteSpace(effort) ? "--" : effort, Color.Parse("#AAB6C8"))
     };
 }
