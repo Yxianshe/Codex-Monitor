@@ -246,6 +246,23 @@
                                     ShadowEnabled="False"/>
           <ScrollViewer Margin="14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <ListBox x:Name="TaskList" ItemsSource="{Binding Tasks}">
+              <ListBox.ItemContainerTheme>
+                <ControlTheme TargetType="ListBoxItem">
+                  <Setter Property="Padding" Value="0"/>
+                  <Setter Property="Margin" Value="0"/>
+                  <Setter Property="Background" Value="Transparent"/>
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                  <Setter Property="FocusAdorner" Value="{x:Null}"/>
+                  <Setter Property="Template">
+                    <ControlTemplate>
+                      <ContentPresenter Content="{TemplateBinding Content}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                                        Background="Transparent"
+                                        HorizontalContentAlignment="Stretch"/>
+                    </ControlTemplate>
+                  </Setter>
+                </ControlTheme>
+              </ListBox.ItemContainerTheme>
               <ListBox.ItemTemplate>
                 <DataTemplate>
                   <Border Classes="taskRow"
