@@ -251,7 +251,7 @@ internal static class MonitorData
             "initialize",
             new
             {
-                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.2" },
+                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.3" },
                 capabilities
             });
         await WriteMessageAsync(process, new { jsonrpc = "2.0", method = "initialized", @params = new { } });
