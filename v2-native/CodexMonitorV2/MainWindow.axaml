@@ -132,15 +132,15 @@
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="ScrollViewer#TaskScrollViewer /template/ ScrollBar:vertical">
-      <Setter Property="Width" Value="8"/>
-      <Setter Property="MinWidth" Value="8"/>
+      <Setter Property="Width" Value="7"/>
+      <Setter Property="MinWidth" Value="7"/>
       <Setter Property="Margin" Value="0,5,2,5"/>
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Opacity" Value="0.64"/>
+      <Setter Property="Opacity" Value="0.72"/>
       <Setter Property="AllowAutoHide" Value="False"/>
       <Setter Property="Template">
         <ControlTemplate>
-          <Grid Width="8" Background="Transparent">
+          <Grid Width="7" Background="Transparent">
             <Track Margin="1,0"
                    Minimum="{TemplateBinding Minimum}"
                    Maximum="{TemplateBinding Maximum}"
@@ -162,10 +162,10 @@
                   </RepeatButton.Template>
                 </RepeatButton>
               </Track.IncreaseButton>
-              <Thumb Width="5" MinHeight="22" Background="#98FFFFFF">
+              <Thumb Width="4" MinHeight="18" Background="#8098A1AE">
                 <Thumb.Template>
                   <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}" CornerRadius="3"/>
+                    <Border Background="{TemplateBinding Background}" CornerRadius="2"/>
                   </ControlTemplate>
                 </Thumb.Template>
               </Thumb>
@@ -178,43 +178,49 @@
       <Setter Property="Opacity" Value="0.92"/>
     </Style>
     <Style Selector="ScrollViewer#TaskScrollViewer /template/ ScrollBar:vertical /template/ Thumb:pointerover">
-      <Setter Property="Background" Value="#D8FFFFFF"/>
+      <Setter Property="Background" Value="#C0BCC5D0"/>
     </Style>
   </Window.Styles>
 
   <Grid Background="Transparent">
-    <Border Margin="0" CornerRadius="22" ClipToBounds="True"
+    <!-- One shared clip keeps the moving scene and the physical glass on the exact same silhouette. -->
+    <Border x:Name="WindowShape" Margin="0" CornerRadius="20" ClipToBounds="True"
             BorderThickness="0">
-      <Image x:Name="BackdropImage" Stretch="UniformToFill" Opacity="1"
-             RenderOptions.BitmapInterpolationMode="HighQuality"/>
+      <Grid>
+        <Image x:Name="BackdropImage" Stretch="UniformToFill" Opacity="1"
+               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+        <glass:LiquidGlassSurface x:Name="GlassPanel"
+                                  Opacity="1"
+                                  CornerRadius="20"
+                                  RefractionHeight="30"
+                                  Refraction="25"
+                                  DepthEffect="True"
+                                  Depth="1.16"
+                                  ChromaticAberration="True"
+                                  Dispersion="0.16"
+                                  Frost="0.22"
+                                  Splay="2.90"
+                                  Light="1.28"
+                                  Vibrancy="1.04"
+                                  Brightness="0.012"
+                                  Contrast="1.04"
+                                  BackdropOpacity="0.86"
+                                  TintColor="#00000000"
+                                  SurfaceColor="#06FFFFFF"
+                                  HighlightEnabled="True"
+                                  HighlightWidth="0.85"
+                                  HighlightBlurRadius="0.65"
+                                  HighlightOpacity="0.72"
+                                  HighlightAngle="-42"
+                                  HighlightFalloff="1.35"
+                                  ShadowEnabled="False"
+                                  InnerShadowEnabled="True"
+                                  InnerShadowRadius="14"
+                                  InnerShadowOffset="0,3"
+                                  InnerShadowColor="#18000000"
+                                  InnerShadowOpacity="0.52"/>
+      </Grid>
     </Border>
-
-    <glass:LiquidGlassSurface x:Name="GlassPanel"
-                              Margin="2"
-                              Opacity="1"
-                              CornerRadius="20"
-                              RefractionHeight="23"
-                              Refraction="16"
-                              DepthEffect="True"
-                              Depth="0.96"
-                              ChromaticAberration="True"
-                              Dispersion="0.55"
-                              Frost="0.50"
-                              Splay="2.40"
-                              Light="1.10"
-                              Vibrancy="1.16"
-                              Brightness="0.035"
-                              Contrast="1.11"
-                              BackdropOpacity="0.76"
-                              TintColor="#00000000"
-                              SurfaceColor="#0AFFFFFF"
-                              HighlightEnabled="True"
-                              HighlightWidth="1.0"
-                              HighlightBlurRadius="1.0"
-                              HighlightOpacity="0.66"
-                              HighlightAngle="-38"
-                              HighlightFalloff="0.80"
-                              ShadowEnabled="False"/>
     <Border x:Name="ForegroundLayer" Margin="18" Background="#06020710" CornerRadius="18"
             glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
       <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="8">
@@ -284,15 +290,20 @@
 
         <Grid x:Name="TaskCard" Grid.Row="2" MinHeight="92">
           <glass:LiquidGlassSurface x:Name="TaskLens" IsHitTestVisible="False"
-                                    CornerRadius="18" RefractionHeight="20" Refraction="16"
-                                    DepthEffect="True" Depth="0.88"
-                                    ChromaticAberration="True" Dispersion="0.42"
-                                    Frost="0.45" Splay="2.20" Light="0.86"
-                                    Vibrancy="1.08" Brightness="0.02" Contrast="1.05"
-                                    BackdropOpacity="0.98" SurfaceColor="#10020A18"
-                                    HighlightEnabled="True" HighlightWidth="0.65"
-                                    HighlightBlurRadius="0.75" HighlightOpacity="0.38"
-                                    ShadowEnabled="False"/>
+                                    CornerRadius="18" RefractionHeight="22" Refraction="22"
+                                    DepthEffect="True" Depth="1.08"
+                                    ChromaticAberration="True" Dispersion="0.12"
+                                    Frost="0.20" Splay="2.85" Light="1.18"
+                                    Vibrancy="1.03" Brightness="0.008" Contrast="1.03"
+                                    BackdropOpacity="0.90" SurfaceColor="#06FFFFFF"
+                                    HighlightEnabled="True" HighlightWidth="0.75"
+                                    HighlightBlurRadius="0.60" HighlightOpacity="0.68"
+                                    HighlightAngle="-42" HighlightFalloff="1.40"
+                                    ShadowEnabled="True" ShadowRadius="10" ShadowOffset="0,4"
+                                    ShadowColor="#16000000" ShadowOpacity="0.54"
+                                    InnerShadowEnabled="True" InnerShadowRadius="10"
+                                    InnerShadowOffset="0,2" InnerShadowColor="#14000000"
+                                    InnerShadowOpacity="0.45"/>
           <ScrollViewer x:Name="TaskScrollViewer" Margin="14,10"
                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <ListBox x:Name="TaskList" ItemsSource="{Binding Tasks}">
@@ -359,15 +370,20 @@
 
         <Grid x:Name="UsageCard" Grid.Row="4">
           <glass:LiquidGlassSurface x:Name="UsageLens" IsHitTestVisible="False"
-                                    CornerRadius="18" RefractionHeight="20" Refraction="16"
-                                    DepthEffect="True" Depth="0.88"
-                                    ChromaticAberration="True" Dispersion="0.42"
-                                    Frost="0.45" Splay="2.20" Light="0.86"
-                                    Vibrancy="1.08" Brightness="0.02" Contrast="1.05"
-                                    BackdropOpacity="0.98" SurfaceColor="#10020A18"
-                                    HighlightEnabled="True" HighlightWidth="0.65"
-                                    HighlightBlurRadius="0.75" HighlightOpacity="0.38"
-                                    ShadowEnabled="False"/>
+                                    CornerRadius="18" RefractionHeight="22" Refraction="22"
+                                    DepthEffect="True" Depth="1.08"
+                                    ChromaticAberration="True" Dispersion="0.12"
+                                    Frost="0.20" Splay="2.85" Light="1.18"
+                                    Vibrancy="1.03" Brightness="0.008" Contrast="1.03"
+                                    BackdropOpacity="0.90" SurfaceColor="#06FFFFFF"
+                                    HighlightEnabled="True" HighlightWidth="0.75"
+                                    HighlightBlurRadius="0.60" HighlightOpacity="0.68"
+                                    HighlightAngle="-42" HighlightFalloff="1.40"
+                                    ShadowEnabled="True" ShadowRadius="10" ShadowOffset="0,4"
+                                    ShadowColor="#16000000" ShadowOpacity="0.54"
+                                    InnerShadowEnabled="True" InnerShadowRadius="10"
+                                    InnerShadowOffset="0,2" InnerShadowColor="#14000000"
+                                    InnerShadowOpacity="0.45"/>
           <Grid Margin="20,10" RowDefinitions="64,1,64">
             <Grid ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
