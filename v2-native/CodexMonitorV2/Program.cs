@@ -12,6 +12,12 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (args.Contains("--scene-motion-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            Environment.ExitCode = MainWindow.SceneMotionSelfCheck() ? 0 : 1;
+            return;
+        }
+
         _mutex = new Mutex(true, "Local\\CodexMonitorV2.SingleInstance", out bool first);
         if (!first)
         {

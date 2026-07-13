@@ -5,6 +5,8 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Rendering.Composition;
+using Avalonia.Rendering.Composition.Animations;
 using Avalonia.Threading;
 using LiquidGlassAvaloniaUI;
 using System.Collections.ObjectModel;
@@ -17,7 +19,6 @@ public sealed partial class MainWindow : Window
 {
     public ObservableCollection<TaskRow> Tasks { get; } = new();
     private readonly DispatcherTimer _dataTimer;
-    private readonly DispatcherTimer _glassTimer;
     private readonly ConicGradientBrush _flowBorderBrush;
     private bool _dataBusy;
     private Bitmap? _sceneBitmap;
@@ -28,11 +29,7 @@ public sealed partial class MainWindow : Window
     private MonitorData.QuotaSnapshot? _lastQuota;
     private bool? _manualIsDay;
     private IReadOnlyList<MonitorData.ModelDescriptor> _models = Array.Empty<MonitorData.ModelDescriptor>();
-    private double _flowPhase;
-    private double _scenePhase;
-    private readonly ScaleTransform _sceneScale = new();
-    private readonly RotateTransform _sceneRotate = new();
-    private readonly TranslateTransform _sceneTranslate = new();
+    private CompositionVisual? _sceneVisual;
     private readonly bool _animationsEnabled;
     private bool _syncingDefaults;
     private int _defaultChangeVersion;
@@ -42,6 +39,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = this;
+        LiquidGlassBackdrop.SetIsLive(this, false);
         _animationsEnabled = Environment.GetEnvironmentVariable("CODEX_MONITOR_REDUCE_MOTION") != "1"
             && ClientAreaAnimationsEnabled();
         _isEnglish = !string.Equals(
@@ -56,13 +54,8 @@ public sealed partial class MainWindow : Window
             _ => null
         };
         _flowBorderBrush = CreateFlowBorderBrush();
-        TransformGroup sceneTransform = new();
-        sceneTransform.Children.Add(_sceneScale);
-        sceneTransform.Children.Add(_sceneRotate);
-        sceneTransform.Children.Add(_sceneTranslate);
         Image backdrop = this.FindControl<Image>("BackdropImage")!;
-        backdrop.RenderTransformOrigin = new RelativePoint(0.08, 0.5, RelativeUnit.Relative);
-        backdrop.RenderTransform = sceneTransform;
+        backdrop.SizeChanged += (_, _) => UpdateSceneCenterPoint();
         foreach (string name in new[] { "TokenButton", "ThemeButton", "LanguageButton", "PinButton", "MinimizeButton", "CloseButton" })
             this.FindControl<Button>(name)!.BorderBrush = _flowBorderBrush;
         this.FindControl<ListBox>("TaskList")!.SelectionChanged += (_, _) => SelectedTaskChanged();
@@ -75,11 +68,6 @@ public sealed partial class MainWindow : Window
             ApplySceneBackground();
             await RefreshDataAsync();
         };
-        _glassTimer = new DispatcherTimer(DispatcherPriority.Render)
-        {
-            Interval = TimeSpan.FromMilliseconds(50)
-        };
-        _glassTimer.Tick += (_, _) => TickGlassAnimation();
         Opened += async (_, _) =>
         {
             ApplyNativeWindowMaterial();
@@ -90,13 +78,13 @@ public sealed partial class MainWindow : Window
             _models = await models;
             await InitializeDefaultSelectorsAsync();
             _dataTimer.Start();
-            _glassTimer.Start();
+            StartSceneCompositionAnimation();
             await CapturePreviewIfRequestedAsync();
         };
         Closed += (_, _) =>
         {
             _dataTimer.Stop();
-            _glassTimer.Stop();
+            StopSceneCompositionAnimation();
             _sceneBitmap?.Dispose();
         };
 
@@ -129,26 +117,96 @@ public sealed partial class MainWindow : Window
         }
     };
 
-    private void TickGlassAnimation()
+    private void StartSceneCompositionAnimation()
     {
-        if (!_animationsEnabled || !IsVisible || WindowState == WindowState.Minimized) return;
-        _flowPhase = (_flowPhase + 1.0 / 240.0) % 1.0;
-        _flowBorderBrush.Angle = _flowPhase * 360.0;
-        this.FindControl<LiquidGlassSurface>("GlassPanel")!.FlowPhase = _flowPhase;
+        Image backdrop = this.FindControl<Image>("BackdropImage")!;
+        _sceneVisual ??= ElementComposition.GetElementVisual(backdrop);
+        if (_sceneVisual is null) return;
 
-        if (_sceneBitmap is null) return;
+        StopSceneCompositionAnimation();
+        UpdateSceneCenterPoint();
+
         bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
-        _scenePhase = (_scenePhase + 1.0 / (isDay ? 840.0 : 1120.0)) % 1.0;
-        double radians = _scenePhase * Math.PI * 2;
-        double breath = Math.Sin(radians);
-        double baseScaleX = isDay ? 1.06 : 1.0;
-        double baseScaleY = isDay ? 1.02 : 1.0;
-        _sceneScale.ScaleX = baseScaleX + breath * (isDay ? 0.008 : 0.006);
-        _sceneScale.ScaleY = baseScaleY + breath * (isDay ? 0.006 : 0.005);
-        _sceneTranslate.X = Math.Sin(radians * 0.73) * (isDay ? 3.6 : 2.4);
-        _sceneTranslate.Y = Math.Cos(radians * 0.91) * (isDay ? 2.2 : 1.8);
-        _sceneRotate.Angle = Math.Sin(radians * 0.57) * (isDay ? 0.20 : 0.12);
+        SceneMotionFrame rest = SampleSceneMotion(isDay, 0);
+        _sceneVisual.Scale = new Vector3D(rest.ScaleX, rest.ScaleY, 1);
+        _sceneVisual.Offset = new Vector3D(rest.X, rest.Y, 0);
+        _sceneVisual.RotationAngle = (float)rest.Rotation;
+        if (!_animationsEnabled || WindowState == WindowState.Minimized) return;
+
+        TimeSpan duration = TimeSpan.FromSeconds(isDay ? 36 : 44);
+        Vector3DKeyFrameAnimation scale = _sceneVisual.Compositor.CreateVector3DKeyFrameAnimation();
+        Vector3DKeyFrameAnimation offset = _sceneVisual.Compositor.CreateVector3DKeyFrameAnimation();
+        ScalarKeyFrameAnimation rotation = _sceneVisual.Compositor.CreateScalarKeyFrameAnimation();
+        scale.Duration = offset.Duration = rotation.Duration = duration;
+        scale.IterationBehavior = offset.IterationBehavior = rotation.IterationBehavior = AnimationIterationBehavior.Forever;
+
+        const int steps = 64;
+        for (int i = 0; i <= steps; i++)
+        {
+            float progress = i / (float)steps;
+            SceneMotionFrame frame = SampleSceneMotion(isDay, progress);
+            scale.InsertKeyFrame(progress, new Vector3D(frame.ScaleX, frame.ScaleY, 1));
+            offset.InsertKeyFrame(progress, new Vector3D(frame.X, frame.Y, 0));
+            rotation.InsertKeyFrame(progress, (float)frame.Rotation);
+        }
+
+        _sceneVisual.StartAnimation("Scale", scale);
+        _sceneVisual.StartAnimation("Offset", offset);
+        _sceneVisual.StartAnimation("RotationAngle", rotation);
     }
+
+    private void StopSceneCompositionAnimation()
+    {
+        _sceneVisual?.StopAnimation("Scale");
+        _sceneVisual?.StopAnimation("Offset");
+        _sceneVisual?.StopAnimation("RotationAngle");
+    }
+
+    private void UpdateSceneCenterPoint()
+    {
+        if (_sceneVisual is null) return;
+        Image backdrop = this.FindControl<Image>("BackdropImage")!;
+        _sceneVisual.CenterPoint = new Vector3D(backdrop.Bounds.Width * 0.12, backdrop.Bounds.Height * 0.5, 0);
+    }
+
+    private static SceneMotionFrame SampleSceneMotion(bool isDay, double phase)
+    {
+        double angle = phase * Math.PI * 2;
+        double second = angle * 2;
+        double baseScaleX = isDay ? 1.075 : 1.050;
+        double baseScaleY = isDay ? 1.045 : 1.038;
+        double scaleX = baseScaleX + Math.Sin(angle - 0.40) * (isDay ? 0.010 : 0.008)
+            + Math.Sin(second + 0.20) * 0.0025;
+        double scaleY = baseScaleY + Math.Sin(angle - 0.15) * (isDay ? 0.008 : 0.006)
+            + Math.Sin(second - 0.35) * 0.0020;
+        double x = Math.Sin(angle) * (isDay ? 5.5 : 4.2) + Math.Sin(second + 0.40) * 1.1;
+        double y = Math.Cos(angle) * (isDay ? 3.2 : 2.6) + Math.Sin(second - 0.60) * 0.7;
+        double rotation = Math.Sin(angle + 0.70) * (isDay ? 0.0035 : 0.0026);
+        return new SceneMotionFrame(scaleX, scaleY, x, y, rotation);
+    }
+
+    internal static bool SceneMotionSelfCheck()
+    {
+        foreach (bool isDay in new[] { false, true })
+        {
+            SceneMotionFrame first = SampleSceneMotion(isDay, 0);
+            SceneMotionFrame last = SampleSceneMotion(isDay, 1);
+            if (Math.Abs(first.ScaleX - last.ScaleX) > 0.000001
+                || Math.Abs(first.ScaleY - last.ScaleY) > 0.000001
+                || Math.Abs(first.X - last.X) > 0.000001
+                || Math.Abs(first.Y - last.Y) > 0.000001
+                || Math.Abs(first.Rotation - last.Rotation) > 0.000001)
+                return false;
+        }
+        return true;
+    }
+
+    private readonly record struct SceneMotionFrame(
+        double ScaleX,
+        double ScaleY,
+        double X,
+        double Y,
+        double Rotation);
 
     private async Task CapturePreviewIfRequestedAsync()
     {
@@ -271,7 +329,7 @@ public sealed partial class MainWindow : Window
     {
         nint hwnd = TryGetPlatformHandle()?.Handle ?? 0;
         if (hwnd == 0) return;
-        int rounded = 3;
+        int rounded = 2;
         DwmSetWindowAttribute(hwnd, 33, ref rounded, sizeof(int));
         int noSystemBorder = unchecked((int)0xFFFFFFFE);
         DwmSetWindowAttribute(hwnd, 34, ref noSystemBorder, sizeof(int));
@@ -287,10 +345,6 @@ public sealed partial class MainWindow : Window
         WireResizeGrip("BottomGrip", WindowEdge.South);
         WireResizeGrip("LeftGrip", WindowEdge.West);
         WireResizeGrip("RightGrip", WindowEdge.East);
-        WireResizeGrip("TopLeftGrip", WindowEdge.NorthWest);
-        WireResizeGrip("TopRightGrip", WindowEdge.NorthEast);
-        WireResizeGrip("BottomLeftGrip", WindowEdge.SouthWest);
-        WireResizeGrip("BottomRightGrip", WindowEdge.SouthEast);
     }
 
     private void WireResizeGrip(string name, WindowEdge edge)
@@ -329,11 +383,6 @@ public sealed partial class MainWindow : Window
         Bitmap next = new(AssetLoader.Open(uri));
         Image backdrop = this.FindControl<Image>("BackdropImage")!;
         backdrop.Source = next;
-        _sceneScale.ScaleX = isDay ? 1.06 : 1.0;
-        _sceneScale.ScaleY = isDay ? 1.02 : 1.0;
-        _sceneRotate.Angle = 0;
-        _sceneTranslate.X = 0;
-        _sceneTranslate.Y = 0;
 
         Color lensTint = Color.Parse(isDay ? "#140D0502" : "#0C020A18");
         this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;
@@ -344,6 +393,8 @@ public sealed partial class MainWindow : Window
         _sceneBitmap = next;
         _sceneIsDay = isDay;
         old?.Dispose();
+        StartSceneCompositionAnimation();
+        Dispatcher.UIThread.Post(() => LiquidGlassBackdrop.Refresh(backdrop), DispatcherPriority.Render);
     }
 
     private async Task RefreshDataAsync()

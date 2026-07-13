@@ -82,8 +82,26 @@ namespace LiquidGlassAvaloniaUI
                 state.Snapshot is null
                 || !state.SnapshotScaling.Equals(scaling);
 
+            if (!shouldCapture)
+            {
+                BackdropClip desiredClip = CalculateBackdropClip(topLevel, state, scaling);
+                shouldCapture = desiredClip.DipRect.Width > 0
+                    && desiredClip.DipRect.Height > 0
+                    && (!state.HasLastClipRect || !RectContains(state.LastClipRect, desiredClip.DipRect));
+            }
+
             if (shouldCapture)
                 QueueCapture(topLevel, state);
+        }
+
+        public static void Refresh(Control control)
+        {
+            TopLevel? topLevel = TopLevel.GetTopLevel(control);
+            if (topLevel is null || !s_states.TryGetValue(topLevel, out BackdropState? state))
+                return;
+
+            state.ForcePublishNextCapture = true;
+            QueueCapture(topLevel, state);
         }
 
         public static void NotifySubscriberOnlyInvalidation(Control control)
@@ -262,6 +280,9 @@ namespace LiquidGlassAvaloniaUI
                     return;
 
                 if (!topLevel.IsVisible)
+                    return;
+
+                if (!LiquidGlassBackdrop.GetIsLive(topLevel))
                     return;
 
                 bool hasDirtyRect = TryGetDirtyRect(args, out Rect dirtyRect);
