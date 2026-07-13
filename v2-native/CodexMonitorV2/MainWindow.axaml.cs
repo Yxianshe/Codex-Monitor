@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Rendering.Composition;
 using Avalonia.Rendering.Composition.Animations;
 using Avalonia.Threading;
@@ -34,6 +35,10 @@ public sealed partial class MainWindow : Window
     private bool _syncingDefaults;
     private int _defaultChangeVersion;
     private readonly SemaphoreSlim _defaultWriteGate = new(1, 1);
+    private readonly SceneSettingsStore _sceneSettings = SceneSettingsStore.Load();
+    private readonly DispatcherTimer _sceneSettingsSaveTimer;
+    private bool _syncingSceneControls;
+    private bool _nativeInteractionActive;
 
     public MainWindow()
     {
@@ -54,9 +59,14 @@ public sealed partial class MainWindow : Window
             _ => null
         };
         _flowBorderBrush = CreateFlowBorderBrush();
-        Image backdrop = this.FindControl<Image>("BackdropImage")!;
-        backdrop.SizeChanged += (_, _) => UpdateSceneCenterPoint();
-        foreach (string name in new[] { "TokenButton", "ThemeButton", "LanguageButton", "PinButton", "MinimizeButton", "CloseButton" })
+        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
+        backdrop.SizeChanged += (_, _) =>
+        {
+            UpdateSceneCenterPoint();
+            ApplySceneRestTransform();
+            RefreshGlassBackdrop();
+        };
+        foreach (string name in new[] { "SettingsButton", "TokenButton", "ThemeButton", "LanguageButton", "PinButton", "MinimizeButton", "CloseButton", "SettingsCloseButton" })
             this.FindControl<Button>(name)!.BorderBrush = _flowBorderBrush;
         this.FindControl<ListBox>("TaskList")!.SelectionChanged += (_, _) => SelectedTaskChanged();
         this.FindControl<ComboBox>("DefaultModelBox")!.SelectionChanged += (_, _) => DefaultModelChanged();
@@ -67,6 +77,12 @@ public sealed partial class MainWindow : Window
         {
             ApplySceneBackground();
             await RefreshDataAsync();
+        };
+        _sceneSettingsSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
+        _sceneSettingsSaveTimer.Tick += (_, _) =>
+        {
+            _sceneSettingsSaveTimer.Stop();
+            StartSceneCompositionAnimation();
         };
         Opened += async (_, _) =>
         {
@@ -84,6 +100,7 @@ public sealed partial class MainWindow : Window
         Closed += (_, _) =>
         {
             _dataTimer.Stop();
+            _sceneSettingsSaveTimer.Stop();
             StopSceneCompositionAnimation();
             _sceneBitmap?.Dispose();
         };
@@ -99,6 +116,14 @@ public sealed partial class MainWindow : Window
         };
         this.FindControl<Button>("ThemeButton")!.Click += (_, _) => ToggleScene();
         this.FindControl<Button>("LanguageButton")!.Click += (_, _) => ToggleLanguage();
+        this.FindControl<Button>("SettingsButton")!.Click += (_, _) => ToggleSceneSettings(true);
+        this.FindControl<Button>("SettingsCloseButton")!.Click += (_, _) => ToggleSceneSettings(false);
+        this.FindControl<Button>("ChooseSceneImageButton")!.Click += async (_, _) => await ChooseSceneImageAsync();
+        this.FindControl<Button>("ResetSceneImageButton")!.Click += (_, _) => ResetCurrentSceneSettings();
+        this.FindControl<Button>("SaveSceneSettingsButton")!.Click += (_, _) => SaveSceneSettings();
+        this.FindControl<Slider>("SceneZoomSlider")!.ValueChanged += (_, _) => SceneControlsChanged();
+        this.FindControl<Slider>("ScenePositionXSlider")!.ValueChanged += (_, _) => SceneControlsChanged();
+        this.FindControl<Slider>("ScenePositionYSlider")!.ValueChanged += (_, _) => SceneControlsChanged();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -119,19 +144,20 @@ public sealed partial class MainWindow : Window
 
     private void StartSceneCompositionAnimation()
     {
-        Image backdrop = this.FindControl<Image>("BackdropImage")!;
+        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
         _sceneVisual ??= ElementComposition.GetElementVisual(backdrop);
         if (_sceneVisual is null) return;
 
         StopSceneCompositionAnimation();
         UpdateSceneCenterPoint();
+        ApplySceneLayoutTransform();
 
         bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
         SceneMotionFrame rest = SampleSceneMotion(isDay, 0);
         _sceneVisual.Scale = new Vector3D(rest.ScaleX, rest.ScaleY, 1);
         _sceneVisual.Offset = new Vector3D(rest.X, rest.Y, 0);
         _sceneVisual.RotationAngle = (float)rest.Rotation;
-        if (!_animationsEnabled || WindowState == WindowState.Minimized) return;
+        if (!_animationsEnabled || _nativeInteractionActive || WindowState == WindowState.Minimized) return;
 
         TimeSpan duration = TimeSpan.FromSeconds(isDay ? 36 : 44);
         Vector3DKeyFrameAnimation scale = _sceneVisual.Compositor.CreateVector3DKeyFrameAnimation();
@@ -165,24 +191,49 @@ public sealed partial class MainWindow : Window
     private void UpdateSceneCenterPoint()
     {
         if (_sceneVisual is null) return;
-        Image backdrop = this.FindControl<Image>("BackdropImage")!;
-        _sceneVisual.CenterPoint = new Vector3D(backdrop.Bounds.Width * 0.12, backdrop.Bounds.Height * 0.5, 0);
+        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
+        _sceneVisual.CenterPoint = new Vector3D(backdrop.Bounds.Width * 0.5, backdrop.Bounds.Height * 0.5, 0);
+    }
+
+    private void ApplySceneRestTransform()
+    {
+        if (_sceneVisual is null) return;
+        ApplySceneLayoutTransform();
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        SceneMotionFrame rest = SampleSceneMotion(isDay, 0);
+        _sceneVisual.Scale = new Vector3D(rest.ScaleX, rest.ScaleY, 1);
+        _sceneVisual.Offset = new Vector3D(rest.X, rest.Y, 0);
+        _sceneVisual.RotationAngle = (float)rest.Rotation;
+    }
+
+    private void ApplySceneLayoutTransform()
+    {
+        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        SceneViewSettings settings = GetSceneSettings(isDay);
+        backdrop.Zoom = settings.Zoom;
+        backdrop.PositionX = settings.PositionX;
+        backdrop.PositionY = settings.PositionY;
+    }
+
+    private void RefreshGlassBackdrop()
+    {
+        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
+        Dispatcher.UIThread.Post(
+            () => LiquidGlassBackdrop.Refresh(backdrop),
+            DispatcherPriority.Render);
     }
 
     private static SceneMotionFrame SampleSceneMotion(bool isDay, double phase)
     {
         double angle = phase * Math.PI * 2;
         double second = angle * 2;
-        double baseScaleX = isDay ? 1.075 : 1.050;
-        double baseScaleY = isDay ? 1.045 : 1.038;
-        double scaleX = baseScaleX + Math.Sin(angle - 0.40) * (isDay ? 0.010 : 0.008)
-            + Math.Sin(second + 0.20) * 0.0025;
-        double scaleY = baseScaleY + Math.Sin(angle - 0.15) * (isDay ? 0.008 : 0.006)
-            + Math.Sin(second - 0.35) * 0.0020;
-        double x = Math.Sin(angle) * (isDay ? 5.5 : 4.2) + Math.Sin(second + 0.40) * 1.1;
-        double y = Math.Cos(angle) * (isDay ? 3.2 : 2.6) + Math.Sin(second - 0.60) * 0.7;
-        double rotation = Math.Sin(angle + 0.70) * (isDay ? 0.0035 : 0.0026);
-        return new SceneMotionFrame(scaleX, scaleY, x, y, rotation);
+        double scale = 1.0 + Math.Sin(angle - 0.40) * (isDay ? 0.0040 : 0.0032)
+            + Math.Sin(second + 0.20) * 0.0012;
+        double x = Math.Sin(angle) * (isDay ? 1.6 : 1.3) + Math.Sin(second + 0.40) * 0.35;
+        double y = Math.Cos(angle) * (isDay ? 1.1 : 0.9) + Math.Sin(second - 0.60) * 0.25;
+        double rotation = Math.Sin(angle + 0.70) * (isDay ? 0.0012 : 0.0010);
+        return new SceneMotionFrame(scale, scale, x, y, rotation);
     }
 
     internal static bool SceneMotionSelfCheck()
@@ -372,24 +423,36 @@ public sealed partial class MainWindow : Window
     {
         nint hwnd = TryGetPlatformHandle()?.Handle ?? 0;
         if (hwnd == 0) return;
-        ReleaseCapture();
-        SendMessage(hwnd, 0x00A1, (nint)hitTest, 0);
+        bool resizing = hitTest >= 10;
+        _nativeInteractionActive = true;
+        StopSceneCompositionAnimation();
+        ApplySceneRestTransform();
+        if (resizing) CanResize = true;
+        try
+        {
+            ReleaseCapture();
+            SendMessage(hwnd, 0x00A1, (nint)hitTest, 0);
+        }
+        finally
+        {
+            if (resizing) CanResize = false;
+            _nativeInteractionActive = false;
+            ApplyNativeWindowMaterial();
+            UpdateSceneCenterPoint();
+            StartSceneCompositionAnimation();
+            RefreshGlassBackdrop();
+        }
     }
 
-    private void ApplySceneBackground()
+    private void ApplySceneBackground(bool force = false)
     {
         bool isDay = _manualIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
-        if (_sceneIsDay == isDay) return;
+        if (!force && _sceneIsDay == isDay) return;
 
-        Uri uri = new($"avares://CodexMonitorV2/Assets/{(isDay ? "sun" : "moon")}.png");
-        Bitmap next = new(AssetLoader.Open(uri));
-        Image backdrop = this.FindControl<Image>("BackdropImage")!;
+        SceneViewSettings settings = GetSceneSettings(isDay);
+        Bitmap next = LoadSceneBitmap(isDay, settings);
+        SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
         backdrop.Source = next;
-
-        // Remote-desktop compositors can clear fully transparent rounded corners to white.
-        // A scene-matched opaque fallback sits only behind the shared rounded clip; DWM still
-        // owns the final antialiased window silhouette.
-        Background = new SolidColorBrush(Color.Parse(isDay ? "#FF35170C" : "#FF071426"));
 
         Color lensTint = Color.Parse(isDay ? "#140D0502" : "#0C020A18");
         this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;
@@ -400,8 +463,116 @@ public sealed partial class MainWindow : Window
         _sceneBitmap = next;
         _sceneIsDay = isDay;
         old?.Dispose();
+        UpdateSceneSettingsControls();
         StartSceneCompositionAnimation();
-        Dispatcher.UIThread.Post(() => LiquidGlassBackdrop.Refresh(backdrop), DispatcherPriority.Render);
+        RefreshGlassBackdrop();
+    }
+
+    private SceneViewSettings GetSceneSettings(bool isDay) => isDay ? _sceneSettings.Day : _sceneSettings.Night;
+
+    private static Bitmap LoadSceneBitmap(bool isDay, SceneViewSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.ImagePath) && File.Exists(settings.ImagePath))
+        {
+            try
+            {
+                return new Bitmap(settings.ImagePath);
+            }
+            catch
+            {
+                settings.ImagePath = null;
+            }
+        }
+
+        Uri uri = new($"avares://CodexMonitorV2/Assets/{(isDay ? "sun" : "moon")}.png");
+        return new Bitmap(AssetLoader.Open(uri));
+    }
+
+    private void ToggleSceneSettings(bool visible)
+    {
+        this.FindControl<Grid>("SceneSettingsOverlay")!.IsVisible = visible;
+        this.FindControl<Border>("ForegroundLayer")!.IsVisible = !visible;
+        if (visible) UpdateSceneSettingsControls();
+    }
+
+    private void UpdateSceneSettingsControls()
+    {
+        if (this.FindControl<Slider>("SceneZoomSlider") is not Slider zoom) return;
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        SceneViewSettings settings = GetSceneSettings(isDay);
+        _syncingSceneControls = true;
+        zoom.Value = settings.Zoom;
+        this.FindControl<Slider>("ScenePositionXSlider")!.Value = settings.PositionX * 100;
+        this.FindControl<Slider>("ScenePositionYSlider")!.Value = settings.PositionY * 100;
+        this.FindControl<TextBlock>("SceneSettingsSceneValue")!.Text = isDay ? T("Sun", "太阳") : T("Moon", "月球");
+        this.FindControl<TextBlock>("SceneImageNameText")!.Text = string.IsNullOrWhiteSpace(settings.ImagePath)
+            ? T("Built-in image", "内置图片")
+            : Path.GetFileName(settings.ImagePath);
+        UpdateSceneSettingValueLabels(settings);
+        _syncingSceneControls = false;
+    }
+
+    private void SceneControlsChanged()
+    {
+        if (_syncingSceneControls) return;
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        SceneViewSettings settings = GetSceneSettings(isDay);
+        settings.Zoom = this.FindControl<Slider>("SceneZoomSlider")!.Value;
+        settings.PositionX = this.FindControl<Slider>("ScenePositionXSlider")!.Value / 100;
+        settings.PositionY = this.FindControl<Slider>("ScenePositionYSlider")!.Value / 100;
+        UpdateSceneSettingValueLabels(settings);
+        MarkSceneSettingsDirty();
+        StopSceneCompositionAnimation();
+        ApplySceneRestTransform();
+        RefreshGlassBackdrop();
+        _sceneSettingsSaveTimer.Stop();
+        _sceneSettingsSaveTimer.Start();
+    }
+
+    private void UpdateSceneSettingValueLabels(SceneViewSettings settings)
+    {
+        this.FindControl<TextBlock>("SceneZoomValue")!.Text = $"{settings.Zoom:0.00}×";
+        this.FindControl<TextBlock>("ScenePositionXValue")!.Text = $"{settings.PositionX * 100:+0;-0;0}%";
+        this.FindControl<TextBlock>("ScenePositionYValue")!.Text = $"{settings.PositionY * 100:+0;-0;0}%";
+    }
+
+    private async Task ChooseSceneImageAsync()
+    {
+        IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = T("Choose a background image", "选择背景图片"),
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType(T("Image files", "图片文件"))
+                {
+                    Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp" }
+                }
+            }
+        });
+        string? path = files.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(path)) return;
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        GetSceneSettings(isDay).ImagePath = path;
+        MarkSceneSettingsDirty();
+        ApplySceneBackground(force: true);
+    }
+
+    private void ResetCurrentSceneSettings()
+    {
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        GetSceneSettings(isDay).Reset(isDay);
+        MarkSceneSettingsDirty();
+        ApplySceneBackground(force: true);
+    }
+
+    private void MarkSceneSettingsDirty() =>
+        this.FindControl<TextBlock>("SaveSceneSettingsText")!.Text = T("Save settings", "保存设置");
+
+    private void SaveSceneSettings()
+    {
+        _sceneSettings.Save();
+        this.FindControl<TextBlock>("SaveSceneSettingsText")!.Text = T("Saved", "已保存");
     }
 
     private async Task RefreshDataAsync()
@@ -567,6 +738,20 @@ public sealed partial class MainWindow : Window
         this.FindControl<TextBlock>("WeekResetTitleText")!.Text = T("Reset", "重置");
         this.FindControl<TextBlock>("WeekNextDateText")!.Text = T("Next date", "下次日期");
         this.FindControl<TextBlock>("LanguageButtonText")!.Text = _isEnglish ? "中" : "EN";
+        this.FindControl<TextBlock>("SceneSettingsTitleText")!.Text = T("Background settings", "背景设置");
+        this.FindControl<TextBlock>("SceneSettingsSubtitleText")!.Text = T(
+            "Adjust the current scene without changing the window layout",
+            "调整当前场景，不改变窗口布局");
+        this.FindControl<TextBlock>("SceneSettingsSceneLabel")!.Text = T("Current scene", "当前场景");
+        this.FindControl<TextBlock>("ChooseSceneImageText")!.Text = T("Choose image", "选择图片");
+        this.FindControl<TextBlock>("ResetSceneImageText")!.Text = T("Restore default", "恢复默认");
+        this.FindControl<TextBlock>("SceneZoomLabel")!.Text = T("Planet size", "星球大小");
+        this.FindControl<TextBlock>("ScenePositionXLabel")!.Text = T("Horizontal", "水平位置");
+        this.FindControl<TextBlock>("ScenePositionYLabel")!.Text = T("Vertical", "垂直位置");
+        this.FindControl<TextBlock>("SceneSettingsHintText")!.Text = T(
+            "The image keeps its aspect ratio. Position values are relative to the app window.",
+            "图片始终保持宽高比，位置相对于软件窗口。");
+        this.FindControl<TextBlock>("SaveSceneSettingsText")!.Text = T("Save settings", "保存设置");
         ToolTip.SetTip(this.FindControl<StackPanel>("DefaultSettingsPanel")!,
             hasSelectedTask
                 ? T("Select a task, then set the global model and reasoning preference used by the next turn; the active turn remains unchanged",
@@ -575,6 +760,9 @@ public sealed partial class MainWindow : Window
                     "设置 Codex 新任务默认值；正在生成的回合不会改变"));
         ToolTip.SetTip(this.FindControl<Button>("LanguageButton")!,
             T("Switch to Chinese", "切换到英文"));
+        ToolTip.SetTip(this.FindControl<Button>("SettingsButton")!,
+            T("Background settings", "背景设置"));
+        UpdateSceneSettingsControls();
     }
 
     private void UpdateStatusText() => this.FindControl<TextBlock>("StatusText")!.Text = Tasks.Count == 0
@@ -589,6 +777,7 @@ public sealed partial class MainWindow : Window
         _manualIsDay = !current;
         _sceneIsDay = null;
         ApplySceneBackground();
+        if (this.FindControl<Grid>("SceneSettingsOverlay")!.IsVisible) UpdateSceneSettingsControls();
     }
 
     private void RefreshTaskDetails()

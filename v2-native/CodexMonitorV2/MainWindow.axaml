@@ -7,8 +7,8 @@
         Title="Codex Monitor V2"
         Width="550" Height="460" MinWidth="500" MinHeight="420"
         WindowStartupLocation="CenterScreen"
-        WindowDecorations="None" CanResize="True"
-        Background="#FF35170C" TransparencyLevelHint="Transparent"
+        WindowDecorations="None" CanResize="False"
+        Background="Transparent" TransparencyLevelHint="Transparent"
         TextOptions.TextRenderingMode="Antialias"
         TextOptions.TextHintingMode="Strong"
         TextOptions.BaselinePixelAlignment="Aligned"
@@ -187,18 +187,84 @@
     <Style Selector="ScrollViewer#TaskScrollViewer /template/ ScrollBar:vertical /template/ Thumb:pointerover">
       <Setter Property="Background" Value="#C0BCC5D0"/>
     </Style>
+    <Style Selector="Button.settingAction">
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="Padding" Value="14,0"/>
+      <Setter Property="CornerRadius" Value="17"/>
+      <Setter Property="Background" Value="#20FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#58FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.settingAction:pointerover">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="Background" Value="#36FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#A8FFFFFF"/>
+    </Style>
+    <Style Selector="Button.settingAction:pressed">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="Background" Value="#24FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#D0FFFFFF"/>
+    </Style>
+    <Style Selector="Button.settingAction TextBlock">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="TextAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.settingAction:pointerover TextBlock">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+    </Style>
+    <Style Selector="Button.settingAction:pressed TextBlock">
+      <Setter Property="Foreground" Value="#FFFFFFFF"/>
+    </Style>
+    <Style Selector="Slider.sceneSlider">
+      <Setter Property="Height" Value="34"/>
+      <Setter Property="ClipToBounds" Value="False"/>
+      <Setter Property="Foreground" Value="#A7D9FF"/>
+      <Setter Property="Background" Value="#28FFFFFF"/>
+    </Style>
+    <Style Selector="Slider.sceneSlider /template/ Thumb">
+      <Setter Property="Width" Value="16"/>
+      <Setter Property="Height" Value="16"/>
+      <Setter Property="Background" Value="#F8FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#E8FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="ClipToBounds" Value="False"/>
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid Width="20" Height="20" ClipToBounds="False">
+            <Border Width="20" Height="20" CornerRadius="10" Background="#2CFFFFFF"/>
+            <Border Width="14" Height="14" CornerRadius="7"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"/>
+            <Border Width="7" Height="3" CornerRadius="2" Margin="0,3,0,0"
+                    VerticalAlignment="Top" Background="#B8FFFFFF"/>
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="Slider.sceneSlider /template/ Thumb:pointerover">
+      <Setter Property="Background" Value="#FFFFFFFF"/>
+      <Setter Property="BorderBrush" Value="#FFFFFFFF"/>
+    </Style>
   </Window.Styles>
 
   <Grid Background="Transparent">
-    <!-- One shared clip keeps the moving scene and the physical glass on the exact same silhouette. -->
-    <Border x:Name="WindowShape" Margin="0" CornerRadius="20" ClipToBounds="True"
+    <!-- DWM is the only outer clip. A second rounded mask creates visible corner wedges. -->
+    <Border x:Name="WindowShape" Margin="0" CornerRadius="0" ClipToBounds="False"
             BorderThickness="0">
       <Grid>
-        <Image x:Name="BackdropImage" Stretch="UniformToFill" Opacity="1"
-               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+        <local:SceneBackdrop x:Name="BackdropImage" Opacity="1"
+                             RenderOptions.BitmapInterpolationMode="HighQuality"/>
         <glass:LiquidGlassSurface x:Name="GlassPanel"
                                   Opacity="1"
-                                  CornerRadius="20"
+                                  CornerRadius="8"
                                   RefractionHeight="30"
                                   Refraction="25"
                                   DepthEffect="True"
@@ -221,11 +287,7 @@
                                   HighlightAngle="-42"
                                   HighlightFalloff="1.35"
                                   ShadowEnabled="False"
-                                  InnerShadowEnabled="True"
-                                  InnerShadowRadius="16"
-                                  InnerShadowOffset="-1,-4"
-                                  InnerShadowColor="#38000000"
-                                  InnerShadowOpacity="0.72"/>
+                                  InnerShadowEnabled="False"/>
       </Grid>
     </Border>
     <Border x:Name="ForegroundLayer" Margin="18" Background="#06020710" CornerRadius="18"
@@ -237,6 +299,10 @@
             <TextBlock x:Name="MainTitleText" Text="Tasks &amp; Usage" FontSize="21" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <Button x:Name="SettingsButton" Classes="top" Width="34" Padding="0">
+              <PathIcon Width="17" Height="17" Foreground="#FFFFFFFF"
+                        Data="M12,8.5 A3.5,3.5 0 1 0 12,15.5 A3.5,3.5 0 1 0 12,8.5 M19.43,12.98 C19.47,12.66 19.5,12.33 19.5,12 C19.5,11.67 19.47,11.34 19.42,11.02 L21.54,9.37 L19.54,5.91 L17.05,6.91 C16.54,6.5 15.97,6.17 15.35,5.92 L15,3.27 L11,3.27 L10.65,5.92 C10.03,6.17 9.46,6.5 8.95,6.91 L6.46,5.91 L4.46,9.37 L6.58,11.02 C6.53,11.34 6.5,11.67 6.5,12 C6.5,12.33 6.53,12.66 6.58,12.98 L4.46,14.63 L6.46,18.09 L8.95,17.09 C9.46,17.5 10.03,17.83 10.65,18.08 L11,20.73 L15,20.73 L15.35,18.08 C15.97,17.83 16.54,17.5 17.05,17.09 L19.54,18.09 L21.54,14.63 Z"/>
+            </Button>
             <Button x:Name="TokenButton" Classes="top" Width="64">
               <TextBlock Text="Token" Foreground="#FFFFFFFF" FontWeight="SemiBold"/>
             </Button>
@@ -458,8 +524,88 @@
       </Grid>
       </Border>
 
+    <Grid x:Name="SceneSettingsOverlay" Margin="18" IsVisible="False"
+          glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
+      <glass:LiquidGlassSurface IsHitTestVisible="False"
+                                CornerRadius="18" RefractionHeight="24" Refraction="22"
+                                DepthEffect="True" Depth="1.10"
+                                ChromaticAberration="True" Dispersion="0.10"
+                                Frost="0.28" Splay="2.80" Light="1.18"
+                                Vibrancy="1.02" Contrast="1.04" BackdropOpacity="0.92"
+                                SurfaceColor="#18030A16" HighlightEnabled="True"
+                                HighlightWidth="0.8" HighlightBlurRadius="0.7"
+                                HighlightOpacity="0.68" HighlightAngle="-42"
+                                HighlightFalloff="1.4" ShadowEnabled="False"/>
+      <Border CornerRadius="18" Background="#50030A16" Padding="20">
+        <Grid RowDefinitions="Auto,*" RowSpacing="14">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock x:Name="SceneSettingsTitleText" Text="Background settings"
+                         FontSize="18" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
+              <TextBlock x:Name="SceneSettingsSubtitleText" Text="Adjust the current scene without changing the window layout"
+                         FontSize="10.5" Foreground="#C8FFFFFF"/>
+            </StackPanel>
+            <Button x:Name="SettingsCloseButton" Grid.Column="1" Classes="top" Width="34" Margin="8,0,0,0" Padding="0">
+              <PathIcon Width="13" Height="13" Foreground="#FFFFFFFF"
+                        Data="M2,1 L7,6 L12,1 L13,2 L8,7 L13,12 L12,13 L7,8 L2,13 L1,12 L6,7 L1,2 Z"/>
+            </Button>
+          </Grid>
+
+          <StackPanel Grid.Row="1" Spacing="11">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+              <TextBlock x:Name="SceneSettingsSceneLabel" Text="Current scene" FontSize="12"
+                         Foreground="#D8FFFFFF" VerticalAlignment="Center"/>
+              <TextBlock x:Name="SceneSettingsSceneValue" Grid.Column="1" Text="Sun"
+                         FontSize="13" FontWeight="SemiBold" Foreground="#FFFFFFFF" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7">
+                <Button x:Name="ChooseSceneImageButton" Classes="settingAction">
+                  <TextBlock x:Name="ChooseSceneImageText" Text="Choose image"/>
+                </Button>
+                <Button x:Name="ResetSceneImageButton" Classes="settingAction">
+                  <TextBlock x:Name="ResetSceneImageText" Text="Restore default"/>
+                </Button>
+              </StackPanel>
+            </Grid>
+            <TextBlock x:Name="SceneImageNameText" Text="Built-in image" FontSize="10.5"
+                       Foreground="#B8FFFFFF" TextTrimming="CharacterEllipsis"/>
+
+            <Border Height="1" Background="#46FFFFFF"/>
+
+            <Grid ColumnDefinitions="92,*,54" ColumnSpacing="12">
+              <TextBlock x:Name="SceneZoomLabel" Text="Planet size" FontSize="12.5" Foreground="#F0FFFFFF" VerticalAlignment="Center"/>
+              <Slider x:Name="SceneZoomSlider" Grid.Column="1" Classes="sceneSlider"
+                      Minimum="1" Maximum="1.6" SmallChange="0.01" LargeChange="0.05"/>
+              <TextBlock x:Name="SceneZoomValue" Grid.Column="2" FontSize="12" FontWeight="SemiBold"
+                         Foreground="#FFFFFFFF" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid ColumnDefinitions="92,*,54" ColumnSpacing="12">
+              <TextBlock x:Name="ScenePositionXLabel" Text="Horizontal" FontSize="12.5" Foreground="#F0FFFFFF" VerticalAlignment="Center"/>
+              <Slider x:Name="ScenePositionXSlider" Grid.Column="1" Classes="sceneSlider"
+                      Minimum="-35" Maximum="35" SmallChange="1" LargeChange="5"/>
+              <TextBlock x:Name="ScenePositionXValue" Grid.Column="2" FontSize="12" FontWeight="SemiBold"
+                         Foreground="#FFFFFFFF" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid ColumnDefinitions="92,*,54" ColumnSpacing="12">
+              <TextBlock x:Name="ScenePositionYLabel" Text="Vertical" FontSize="12.5" Foreground="#F0FFFFFF" VerticalAlignment="Center"/>
+              <Slider x:Name="ScenePositionYSlider" Grid.Column="1" Classes="sceneSlider"
+                      Minimum="-28" Maximum="28" SmallChange="1" LargeChange="5"/>
+              <TextBlock x:Name="ScenePositionYValue" Grid.Column="2" FontSize="12" FontWeight="SemiBold"
+                         Foreground="#FFFFFFFF" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+            <TextBlock x:Name="SceneSettingsHintText"
+                       Text="The image keeps its aspect ratio. Position values are relative to the app window."
+                       FontSize="10.5" Foreground="#C0FFFFFF" TextWrapping="Wrap"/>
+            <Button x:Name="SaveSceneSettingsButton" Classes="settingAction"
+                    Width="128" HorizontalAlignment="Right">
+              <TextBlock x:Name="SaveSceneSettingsText" Text="Save settings"/>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
     <Grid glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
-      <Border x:Name="MoveGrip" Width="240" Height="52" HorizontalAlignment="Left" VerticalAlignment="Top"
+      <Border x:Name="MoveGrip" Width="190" Height="52" HorizontalAlignment="Left" VerticalAlignment="Top"
               Background="Transparent" Margin="10,0,0,0"/>
       <Border x:Name="TopGrip" Height="10" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNorthSouth"/>
       <Border x:Name="BottomGrip" Height="10" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNorthSouth"/>
