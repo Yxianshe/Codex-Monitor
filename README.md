@@ -28,6 +28,8 @@
 
 V2.1.3 is the polished **static-scene release**. It keeps the cinematic sun and moon artwork, liquid-glass controls, and live Codex information while removing the experimental animated-planet rendering path. This gives the release a quieter visual rhythm, lower background overhead, and consistent composition during dragging, resizing, integrated-GPU use, and remote desktop sessions.
 
+The latest V2.1.3 maintenance build also expands the draggable title area, makes vertical background positioning effective at `1.00x` without exposing an image edge, and adds a local rollout-log fallback for usage limits when the Codex App Server is unavailable on another device.
+
 - **Active task monitor** — concise task titles with the real current model and reasoning level.
 - **Per-task selection** — select a task, then set the model and reasoning preference used by its next turn.
 - **Priority indicator** — a purple lightning mark identifies the 1.5× priority path.
@@ -95,7 +97,7 @@ Drag the open title area to move the window. All four edges and corners support 
 | Task titles | Codex `session_index.jsonl` |
 | Active state and cumulative tokens | Codex `state_5.sqlite` |
 | Model, reasoning level, and detailed tokens | Local Codex rollout logs |
-| Usage limits and reset time | Local Codex App Server rate-limit state |
+| Usage limits and reset time | Local Codex App Server rate-limit state, with a local rollout-log fallback |
 | New-task model and reasoning defaults | Local Codex configuration, written only after selection |
 
 Codex Monitor includes no telemetry, analytics SDK, account upload, or third-party data service. Task titles, token totals, and usage data remain on the computer.
