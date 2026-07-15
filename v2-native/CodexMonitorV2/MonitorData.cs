@@ -29,6 +29,7 @@ internal static class MonitorData
 
     private static string _indexStamp = "";
     private static Dictionary<string, string> _titles = new();
+    private static string[] _activeRolloutPaths = Array.Empty<string>();
 
     public static async Task<IReadOnlyList<TaskSnapshot>> ReadActiveTasksAsync()
     {
@@ -50,7 +51,9 @@ internal static class MonitorData
         if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output)) return Array.Empty<TaskSnapshot>();
 
         Dictionary<string, string> titles = ReadTitleIndex();
+        string configuredTier = ReadConfiguredServiceTier();
         List<TaskSnapshot> result = new();
+        List<string> activeRolloutPaths = new();
         foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             string[] fields = line.TrimEnd('\r').Split('\t');
@@ -61,8 +64,9 @@ internal static class MonitorData
             string databaseModel = HexToString(fields[3]);
             string databaseEffort = HexToString(fields[4]);
             long.TryParse(fields[5], out long tokens);
-            RuntimeState runtime = ReadRuntimeState(path);
+            RuntimeState runtime = ReadRuntimeState(path, configuredTier);
             if (!runtime.Active) continue;
+            if (File.Exists(path)) activeRolloutPaths.Add(path);
 
             string fallback = databaseTitle.Split('\r', '\n')[0].Trim();
             string title = titles.GetValueOrDefault(id, fallback);
@@ -77,6 +81,9 @@ internal static class MonitorData
                 runtime.Tier,
                 tokens));
         }
+        Volatile.Write(
+            ref _activeRolloutPaths,
+            activeRolloutPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
         return result;
     }
 
@@ -191,37 +198,177 @@ internal static class MonitorData
 
     public static async Task<QuotaSnapshot?> ReadQuotaAsync()
     {
-        using Process process = StartAppServer();
+        QuotaSnapshot? live = null;
+        bool logsOnly = string.Equals(
+            Environment.GetEnvironmentVariable("CODEX_MONITOR_QUOTA_SOURCE"),
+            "logs",
+            StringComparison.OrdinalIgnoreCase);
+
+        if (!logsOnly)
+        {
+            Process? process = null;
+            try
+            {
+                process = StartAppServer();
+                await InitializeAppServerAsync(process, experimental: false);
+                JsonElement result = await SendRequestAsync(process, 2, "account/rateLimits/read", null);
+                live = ParseLiveQuotaResult(result);
+                if (live is null)
+                    throw new InvalidOperationException($"rateLimits unavailable: {result}");
+            }
+            catch (Exception error)
+            {
+                Console.Error.WriteLine($"[CodexMonitor] live rate-limit read failed: {error.Message}");
+            }
+            finally
+            {
+                StopAppServer(process);
+            }
+        }
+
+        QuotaSnapshot? rollout = ReadQuotaFromRollouts();
+        if (live is null) return rollout;
+        if (rollout is null) return live;
+        return new QuotaSnapshot(
+            live.FiveHour ?? rollout.FiveHour,
+            live.Weekly ?? rollout.Weekly);
+    }
+
+    private static QuotaSnapshot? ReadQuotaFromRollouts()
+    {
+        IEnumerable<string> paths = Volatile.Read(ref _activeRolloutPaths)
+            .Where(File.Exists)
+            .Concat(FindRecentRolloutFiles());
+
+        WindowLimit? fiveHour = null;
+        WindowLimit? weekly = null;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        foreach (string path in paths
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderByDescending(File.GetLastWriteTimeUtc)
+                     .Take(20))
+        {
+            foreach (string line in ReadTailLines(path).Reverse())
+            {
+                if (!TryParseQuotaLine(line, out QuotaSnapshot? snapshot) || snapshot is null) continue;
+                if (fiveHour is null && snapshot.FiveHour is { } five && five.ResetsAt > now)
+                    fiveHour = five;
+                if (weekly is null && snapshot.Weekly is { } week && week.ResetsAt > now)
+                    weekly = week;
+                if (fiveHour is not null && weekly is not null)
+                    return new QuotaSnapshot(fiveHour, weekly);
+            }
+        }
+
+        return fiveHour is null && weekly is null ? null : new QuotaSnapshot(fiveHour, weekly);
+    }
+
+    private static IEnumerable<string> FindRecentRolloutFiles()
+    {
+        foreach (string directory in new[]
+                 {
+                     Path.Combine(CodexHome, "sessions"),
+                     Path.Combine(CodexHome, "archived_sessions")
+                 })
+        {
+            if (!Directory.Exists(directory)) continue;
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(directory, "rollout-*.jsonl", SearchOption.AllDirectories)
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .Take(20)
+                    .ToArray();
+            }
+            catch
+            {
+                continue;
+            }
+            foreach (string file in files) yield return file;
+        }
+    }
+
+    private static IEnumerable<string> ReadTailLines(string path)
+    {
+        const int maxBytes = 8 * 1024 * 1024;
         try
         {
-            await InitializeAppServerAsync(process, experimental: false);
-            JsonElement result = await SendRequestAsync(process, 2, "account/rateLimits/read", null);
-            if (!result.TryGetProperty("rateLimits", out JsonElement limits)
-                || limits.ValueKind != JsonValueKind.Object)
-                throw new InvalidOperationException($"rateLimits unavailable: {result}");
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            long start = Math.Max(0, stream.Length - maxBytes);
+            stream.Seek(start, SeekOrigin.Begin);
+            using StreamReader reader = new(stream, Encoding.UTF8, true, 4096, leaveOpen: false);
+            if (start > 0) reader.ReadLine();
+            return reader.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
 
-            List<WindowLimit> windows = new();
-            AddLimitWindow(limits, "primary", 300, windows);
-            AddLimitWindow(limits, "secondary", 10080, windows);
-            WindowLimit? fiveHour = windows
-                .Where(item => item.WindowMinutes > 0 && item.WindowMinutes < 1440)
-                .OrderBy(item => Math.Abs(item.WindowMinutes - 300))
-                .FirstOrDefault();
-            WindowLimit? weekly = windows
-                .Where(item => item.WindowMinutes >= 1440)
-                .OrderBy(item => Math.Abs(item.WindowMinutes - 10080))
-                .FirstOrDefault();
-            return new QuotaSnapshot(fiveHour, weekly);
-        }
-        catch (Exception error)
+    private static bool TryParseQuotaLine(string line, out QuotaSnapshot? snapshot)
+    {
+        snapshot = null;
+        if (!line.Contains("rate_limits", StringComparison.Ordinal)
+            && !line.Contains("rateLimits", StringComparison.Ordinal))
+            return false;
+        try
         {
-            Console.Error.WriteLine($"[CodexMonitor] rate-limit read failed: {error.Message}");
-            return null;
+            using JsonDocument document = JsonDocument.Parse(line.TrimEnd('\r'));
+            JsonElement root = document.RootElement;
+            JsonElement payload = root.TryGetProperty("payload", out JsonElement value) ? value : root;
+            if (!TryGetProperty(payload, out JsonElement limits, "rate_limits", "rateLimits")
+                || limits.ValueKind != JsonValueKind.Object)
+                return false;
+            if (TryGetProperty(limits, out JsonElement limitId, "limit_id", "limitId")
+                && limitId.ValueKind == JsonValueKind.String
+                && limitId.GetString() is { Length: > 0 } id
+                && !id.Equals("codex", StringComparison.OrdinalIgnoreCase))
+                return false;
+            snapshot = ParseQuotaSnapshot(limits);
+            return snapshot.FiveHour is not null || snapshot.Weekly is not null;
         }
-        finally
+        catch (JsonException)
         {
-            if (!process.HasExited) process.Kill(true);
+            return false;
         }
+    }
+
+    private static QuotaSnapshot? ParseLiveQuotaResult(JsonElement result)
+    {
+        QuotaSnapshot? direct = null;
+        if (TryGetProperty(result, out JsonElement limits, "rateLimits", "rate_limits")
+            && limits.ValueKind == JsonValueKind.Object)
+            direct = ParseQuotaSnapshot(limits);
+
+        QuotaSnapshot? keyed = null;
+        if (TryGetProperty(result, out JsonElement byId, "rateLimitsByLimitId", "rate_limits_by_limit_id")
+            && byId.ValueKind == JsonValueKind.Object
+            && TryGetProperty(byId, out JsonElement codex, "codex")
+            && codex.ValueKind == JsonValueKind.Object)
+            keyed = ParseQuotaSnapshot(codex);
+
+        if (direct is null) return keyed;
+        if (keyed is null) return direct;
+        return new QuotaSnapshot(
+            direct.FiveHour ?? keyed.FiveHour,
+            direct.Weekly ?? keyed.Weekly);
+    }
+
+    private static QuotaSnapshot ParseQuotaSnapshot(JsonElement limits)
+    {
+        List<WindowLimit> windows = new();
+        AddLimitWindow(limits, "primary", 300, windows);
+        AddLimitWindow(limits, "secondary", 10080, windows);
+        WindowLimit? fiveHour = windows
+            .Where(item => item.WindowMinutes > 0 && item.WindowMinutes < 1440)
+            .OrderBy(item => Math.Abs(item.WindowMinutes - 300))
+            .FirstOrDefault();
+        WindowLimit? weekly = windows
+            .Where(item => item.WindowMinutes >= 1440)
+            .OrderBy(item => Math.Abs(item.WindowMinutes - 10080))
+            .FirstOrDefault();
+        return new QuotaSnapshot(fiveHour, weekly);
     }
 
     private static Process StartAppServer()
@@ -251,7 +398,7 @@ internal static class MonitorData
             "initialize",
             new
             {
-                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.3" },
+                clientInfo = new { name = "codex-monitor", title = "Codex Monitor", version = "2.1.4" },
                 capabilities
             });
         await WriteMessageAsync(process, new { jsonrpc = "2.0", method = "initialized", @params = new { } });
@@ -263,7 +410,10 @@ internal static class MonitorData
         string method,
         object? parameters)
     {
-        await WriteMessageAsync(process, new { jsonrpc = "2.0", id, method, @params = parameters });
+        object request = parameters is null
+            ? new { jsonrpc = "2.0", id, method }
+            : new { jsonrpc = "2.0", id, method, @params = parameters };
+        await WriteMessageAsync(process, request);
         DateTime deadline = DateTime.UtcNow.AddSeconds(12);
         while (DateTime.UtcNow < deadline)
         {
@@ -302,9 +452,30 @@ internal static class MonitorData
     }
 
     private static WindowLimit ParseLimit(JsonElement item) => new(
-        item.TryGetProperty("usedPercent", out JsonElement used) ? used.GetDouble() : 0,
-        item.TryGetProperty("resetsAt", out JsonElement reset) && reset.ValueKind == JsonValueKind.Number ? reset.GetInt64() : 0,
-        item.TryGetProperty("windowDurationMins", out JsonElement window) && window.ValueKind == JsonValueKind.Number ? window.GetDouble() : 0);
+        GetDouble(item, "usedPercent", "used_percent"),
+        GetInt64(item, "resetsAt", "resets_at"),
+        GetDouble(item, "windowDurationMins", "windowDurationMinutes", "window_minutes"));
+
+    private static double GetDouble(JsonElement item, params string[] names) =>
+        TryGetProperty(item, out JsonElement value, names) && value.ValueKind == JsonValueKind.Number
+            ? value.GetDouble()
+            : 0;
+
+    private static long GetInt64(JsonElement item, params string[] names) =>
+        TryGetProperty(item, out JsonElement value, names) && value.ValueKind == JsonValueKind.Number
+            ? value.GetInt64()
+            : 0;
+
+    private static bool TryGetProperty(
+        JsonElement item,
+        out JsonElement value,
+        params string[] names)
+    {
+        foreach (string name in names)
+            if (item.TryGetProperty(name, out value)) return true;
+        value = default;
+        return false;
+    }
 
     private static void AddLimitWindow(
         JsonElement snapshot,
@@ -321,18 +492,19 @@ internal static class MonitorData
         }
     }
 
-    private static RuntimeState ReadRuntimeState(string path)
+    private static RuntimeState ReadRuntimeState(string path, string configuredTier)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return new(false, "", "", "default");
         using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         long position = stream.Length;
         string suffix = "";
-        string model = "", effort = "", tier = "default";
+        string model = "", effort = "", tier = configuredTier;
         bool? active = null;
         const int chunkSize = 1024 * 1024;
+        const long maxScanBytes = 16L * 1024 * 1024;
         long scanned = 0;
 
-        while (position > 0 && scanned < 128L * 1024 * 1024 && (active is null || (active.Value && model.Length == 0)))
+        while (position > 0 && scanned < maxScanBytes && (active is null || (active.Value && model.Length == 0)))
         {
             int count = (int)Math.Min(chunkSize, position);
             position -= count;
@@ -354,7 +526,8 @@ internal static class MonitorData
                 ? lines[0]
                 : "";
         }
-        return new RuntimeState(active == true, model, effort, tier);
+        bool recentlyWritten = DateTime.UtcNow - File.GetLastWriteTimeUtc(path) <= TimeSpan.FromMinutes(10);
+        return new RuntimeState(active == true || active is null && recentlyWritten, model, effort, tier);
     }
 
     private static void ReadRuntimeLine(
@@ -383,7 +556,8 @@ internal static class MonitorData
             {
                 model = GetString(payload, "model");
                 effort = GetString(payload, "effort");
-                tier = GetString(payload, "service_tier");
+                string reportedTier = GetString(payload, "service_tier");
+                if (reportedTier.Length > 0) tier = reportedTier;
                 if (effort.Length == 0
                     && payload.TryGetProperty("collaboration_mode", out JsonElement collaboration)
                     && collaboration.TryGetProperty("settings", out JsonElement settings))
@@ -393,7 +567,8 @@ internal static class MonitorData
             {
                 model = GetString(payload, "model");
                 effort = GetString(payload, "reasoning_effort");
-                tier = GetString(payload, "service_tier");
+                string reportedTier = GetString(payload, "service_tier");
+                if (reportedTier.Length > 0) tier = reportedTier;
             }
 
             if (tier.Length == 0) tier = "default";
@@ -435,6 +610,29 @@ internal static class MonitorData
         return _titles = next;
     }
 
+    private static string ReadConfiguredServiceTier()
+    {
+        string path = Path.Combine(CodexHome, "config.toml");
+        if (!File.Exists(path)) return "default";
+        try
+        {
+            foreach (string rawLine in File.ReadLines(path))
+            {
+                string line = rawLine.Split('#', 2)[0].Trim();
+                if (!line.StartsWith("service_tier", StringComparison.OrdinalIgnoreCase)) continue;
+                int separator = line.IndexOf('=');
+                if (separator < 0) continue;
+                string value = line[(separator + 1)..].Trim().Trim('"', '\'');
+                return string.IsNullOrWhiteSpace(value) ? "default" : value;
+            }
+        }
+        catch
+        {
+            // Keep monitoring functional while Codex rewrites its configuration.
+        }
+        return "default";
+    }
+
     private static string? FindStateDatabase() => Directory.Exists(CodexHome)
         ? Directory.GetFiles(CodexHome, "state_*.sqlite").OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()
         : null;
@@ -456,14 +654,42 @@ internal static class MonitorData
 
     private static string? FindCodexExecutable()
     {
+        string? configured = Environment.GetEnvironmentVariable("CODEX_EXECUTABLE");
         IEnumerable<string> paths = (Environment.GetEnvironmentVariable("PATH") ?? "")
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(path => Path.Combine(path.Trim('"'), "codex.exe"));
         string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(configured)) paths = paths.Prepend(configured);
+        paths = paths.Append(Path.Combine(AppContext.BaseDirectory, "codex.exe"));
         paths = paths.Append(Path.Combine(local, "Programs", "OpenAI", "Codex", "bin", "codex.exe"));
+        paths = paths.Append(Path.Combine(local, "Microsoft", "WindowsApps", "codex.exe"));
         string root = Path.Combine(local, "OpenAI", "Codex", "bin");
         if (Directory.Exists(root)) paths = paths.Concat(Directory.GetFiles(root, "codex.exe", SearchOption.AllDirectories));
-        return paths.FirstOrDefault(File.Exists);
+        foreach (string extensionRoot in new[]
+                 {
+                     Path.Combine(profile, ".vscode", "extensions"),
+                     Path.Combine(profile, ".vscode-insiders", "extensions"),
+                     Path.Combine(profile, ".cursor", "extensions")
+                 })
+        {
+            if (!Directory.Exists(extensionRoot)) continue;
+            try
+            {
+                paths = paths.Concat(
+                    Directory.EnumerateDirectories(extensionRoot, "openai.chatgpt-*", SearchOption.TopDirectoryOnly)
+                        .SelectMany(directory => Directory.EnumerateFiles(directory, "codex.exe", SearchOption.AllDirectories)));
+            }
+            catch { }
+        }
+
+        return paths
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(path => !string.IsNullOrWhiteSpace(configured)
+                                       && path.Equals(configured, StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
     }
 
     private static string FormatModel(string model)

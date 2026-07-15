@@ -1,4 +1,4 @@
-# Codex Monitor V2.1.3
+# Codex Monitor V2.1.4
 
 V2 replaces the PowerShell/WPF visual layer with a native C# Avalonia + Skia renderer.
 

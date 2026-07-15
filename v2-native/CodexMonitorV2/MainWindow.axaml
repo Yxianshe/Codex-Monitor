@@ -142,16 +142,16 @@
       <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="Border.taskRow">
-      <Setter Property="Background" Value="#0EFFFFFF"/>
+      <Setter Property="Background" Value="#1C030A16"/>
       <Setter Property="BorderBrush" Value="#46FFFFFF"/>
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
     </Style>
     <Style Selector="ListBox#TaskList ListBoxItem:pointerover Border.taskRow">
-      <Setter Property="Background" Value="#18FFFFFF"/>
+      <Setter Property="Background" Value="#2A081424"/>
       <Setter Property="BorderBrush" Value="#72FFFFFF"/>
     </Style>
     <Style Selector="ListBox#TaskList ListBoxItem:selected Border.taskRow">
-      <Setter Property="Background" Value="#30FFFFFF"/>
+      <Setter Property="Background" Value="#3A081424"/>
       <Setter Property="BorderBrush" Value="#A8FFFFFF"/>
       <Setter Property="BorderThickness" Value="1"/>
     </Style>
@@ -282,25 +282,25 @@
         <glass:LiquidGlassSurface x:Name="GlassPanel"
                                   Opacity="1"
                                   CornerRadius="8"
-                                  RefractionHeight="30"
-                                  Refraction="25"
+                                  RefractionHeight="32"
+                                  Refraction="27"
                                   DepthEffect="True"
-                                  Depth="1.16"
+                                  Depth="1.20"
                                   ChromaticAberration="True"
                                   Dispersion="0.16"
-                                  Frost="0.22"
+                                  Frost="0.24"
                                   Splay="2.90"
-                                  Light="1.28"
+                                  Light="1.32"
                                   Vibrancy="1.04"
                                   Brightness="0.012"
                                   Contrast="1.04"
-                                  BackdropOpacity="0.86"
+                                  BackdropOpacity="0.89"
                                   TintColor="#00000000"
-                                  SurfaceColor="#06FFFFFF"
+                                  SurfaceColor="#0AFFFFFF"
                                   HighlightEnabled="True"
-                                  HighlightWidth="0.85"
+                                  HighlightWidth="0.95"
                                   HighlightBlurRadius="0.65"
-                                  HighlightOpacity="0.72"
+                                  HighlightOpacity="0.80"
                                   HighlightAngle="-42"
                                   HighlightFalloff="1.35"
                                   ShadowEnabled="False"
@@ -350,17 +350,8 @@
               <TextBlock x:Name="LanguageButtonText" Text="中" Foreground="#FFFFFFFF" FontWeight="SemiBold"/>
             </Button>
             <Button x:Name="PinButton" Classes="top" Width="34" Padding="0">
-              <Grid Width="19" Height="19">
-                <PathIcon x:Name="PinIdleIcon" Width="16" Height="16" Foreground="#FFFFFFFF"
-                          Data="M16,12 L16,4 L17,4 L17,2 L7,2 L7,4 L8,4 L8,12 L6,14 L6,16 L11,16 L11,22 L13,22 L13,16 L18,16 L18,14 Z"/>
-                <PathIcon x:Name="PinActiveIcon" Width="16" Height="16" Foreground="#D3AEFF" IsVisible="False"
-                          RenderTransformOrigin="50%,50%"
-                          Data="M16,12 L16,4 L17,4 L17,2 L7,2 L7,4 L8,4 L8,12 L6,14 L6,16 L11,16 L11,22 L13,22 L13,16 L18,16 L18,14 Z">
-                  <PathIcon.RenderTransform><RotateTransform Angle="-38"/></PathIcon.RenderTransform>
-                </PathIcon>
-                <Ellipse x:Name="PinActiveDot" Width="5" Height="5" Fill="#C895FF" IsVisible="False"
-                         HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
-              </Grid>
+              <PathIcon x:Name="PinIcon" Width="16" Height="16" Foreground="#FFFFFFFF"
+                        Data="M16,12 L16,4 L17,4 L17,2 L7,2 L7,4 L8,4 L8,12 L6,14 L6,16 L11,16 L11,22 L13,22 L13,16 L18,16 L18,14 Z"/>
             </Button>
             <Button x:Name="MinimizeButton" Classes="top" Width="34" Padding="0">
               <Border Width="13" Height="2" CornerRadius="1" Background="#FFFFFFFF"/>
@@ -399,28 +390,30 @@
             </ComboBox>
           </StackPanel>
           <TextBlock x:Name="StatusText" Grid.Column="2" MaxWidth="116" FontSize="11"
-                     Foreground="#EAFFFFFF" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                     Foreground="#FFFFFFFF" FontWeight="Medium"
+                     TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
         </Grid>
 
         <Grid x:Name="TaskCard" Grid.Row="2" MinHeight="92">
           <glass:LiquidGlassSurface x:Name="TaskLens" IsHitTestVisible="False"
-                                    CornerRadius="18" RefractionHeight="22" Refraction="22"
-                                    DepthEffect="True" Depth="1.08"
+                                    CornerRadius="18" RefractionHeight="25" Refraction="24"
+                                    DepthEffect="True" Depth="1.12"
                                     ChromaticAberration="True" Dispersion="0.12"
-                                    Frost="0.20" Splay="2.85" Light="1.18"
+                                    Frost="0.23" Splay="2.85" Light="1.22"
                                     Vibrancy="1.03" Brightness="0.008" Contrast="1.03"
-                                    BackdropOpacity="0.90" SurfaceColor="#06FFFFFF"
-                                    HighlightEnabled="True" HighlightWidth="0.75"
-                                    HighlightBlurRadius="0.60" HighlightOpacity="0.68"
+                                    BackdropOpacity="0.92" SurfaceColor="#08FFFFFF"
+                                    HighlightEnabled="True" HighlightWidth="0.85"
+                                    HighlightBlurRadius="0.65" HighlightOpacity="0.76"
                                     HighlightAngle="-42" HighlightFalloff="1.40"
-                                    ShadowEnabled="True" ShadowRadius="12" ShadowOffset="1,5"
-                                    ShadowColor="#60000000" ShadowOpacity="0.78"
-                                    InnerShadowEnabled="True" InnerShadowRadius="11"
-                                    InnerShadowOffset="-1,-3" InnerShadowColor="#30000000"
-                                    InnerShadowOpacity="0.58"/>
+                                    ShadowEnabled="True" ShadowRadius="14" ShadowOffset="1,5"
+                                    ShadowColor="#60000000" ShadowOpacity="0.82"
+                                    InnerShadowEnabled="True" InnerShadowRadius="12"
+                                     InnerShadowOffset="-1,-3" InnerShadowColor="#30000000"
+                                    InnerShadowOpacity="0.64"/>
+          <Border CornerRadius="18" Background="#1C030A16" IsHitTestVisible="False"/>
           <ScrollViewer x:Name="TaskScrollViewer" Margin="14,10"
                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <ListBox x:Name="TaskList" ItemsSource="{Binding Tasks}">
+            <ListBox x:Name="TaskList" ItemsSource="{Binding Tasks}" Margin="0,0,9,0">
               <ListBox.ItemContainerTheme>
                 <ControlTheme TargetType="ListBoxItem">
                   <Setter Property="Padding" Value="0"/>
@@ -443,33 +436,33 @@
                   <Border Classes="taskRow"
                           CornerRadius="13" Padding="10,7" Margin="1,1"
                           ToolTip.Tip="{Binding CurrentSummary}">
-                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                       <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"
-                                 FontSize="13.5" Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                      <Border Grid.Column="1" Grid.ColumnSpan="3" IsVisible="{Binding TokenVisible}"
+                                 FontSize="13.5" FontWeight="Medium" Foreground="#FFFFFFFF"
+                                 VerticalAlignment="Center" Margin="0,0,12,0"/>
+                      <Border Grid.Column="1" Grid.ColumnSpan="2" IsVisible="{Binding TokenVisible}"
                               Background="#22FFFFFF" BorderThickness="0" CornerRadius="12" Padding="9,4">
                         <TextBlock Text="{Binding TokenDetail}" FontSize="11.5" Foreground="#F4FFFFFF"/>
                       </Border>
-                      <PathIcon Grid.Column="1"
-                                IsVisible="{Binding PriorityVisible}"
-                                Width="9" Height="13" Foreground="#C89CFF"
-                                ToolTip.Tip="{Binding PriorityTip}"
-                                Data="M7,0 L1,7 L5,7 L3,14 L11,5 L7,5 Z"/>
-                      <Border Grid.Column="2" Width="112" Height="27"
+                      <Border Grid.Column="1" Width="112" Height="27"
                               IsVisible="{Binding SettingsVisible}" Background="{Binding ModelBackground}"
                               BorderBrush="#42FFFFFF" BorderThickness="1" CornerRadius="13" Padding="8,0">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                           <Ellipse Width="7" Height="7" Fill="{Binding ModelAccent}"/>
-                          <TextBlock Text="{Binding ModelDisplay}" Foreground="#FFFFFFFF" FontSize="11.5"
+                          <TextBlock Text="{Binding ModelDisplay}" Foreground="#FFFFFFFF" FontSize="11.5" FontWeight="Medium"
                                      TextTrimming="CharacterEllipsis" MaxWidth="78"/>
                         </StackPanel>
                       </Border>
-                      <Border Grid.Column="3" Width="84" Height="27"
+                      <Border Grid.Column="2" Width="84" Height="27"
                               IsVisible="{Binding SettingsVisible}" Background="{Binding EffortBackground}"
                               BorderBrush="#42FFFFFF" BorderThickness="1" CornerRadius="13" Padding="8,0">
                         <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                           <Ellipse Width="7" Height="7" Fill="{Binding EffortAccent}"/>
-                          <TextBlock Text="{Binding EffortDisplay}" Foreground="#FFFFFFFF" FontSize="11.5"/>
+                          <TextBlock Text="{Binding EffortDisplay}" Foreground="#FFFFFFFF" FontSize="11.5" FontWeight="Medium"/>
+                          <PathIcon IsVisible="{Binding PriorityVisible}"
+                                    Width="9" Height="13" Foreground="#C89CFF"
+                                    ToolTip.Tip="{Binding PriorityTip}"
+                                    Data="M7,0 L1,7 L5,7 L3,14 L11,5 L7,5 Z"/>
                         </StackPanel>
                       </Border>
                     </Grid>
@@ -482,38 +475,40 @@
 
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="2,0">
           <TextBlock x:Name="UsageTitleText" Text="Usage" FontSize="15.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-          <TextBlock x:Name="UpdatedText" Grid.Column="1" FontSize="10" Foreground="#CCFFFFFF" VerticalAlignment="Center"/>
+          <TextBlock x:Name="UpdatedText" Grid.Column="1" FontSize="10" Foreground="#E8FFFFFF"
+                     FontWeight="Medium" VerticalAlignment="Center"/>
         </Grid>
 
         <Grid x:Name="UsageCard" Grid.Row="4">
           <glass:LiquidGlassSurface x:Name="UsageLens" IsHitTestVisible="False"
-                                    CornerRadius="18" RefractionHeight="22" Refraction="22"
-                                    DepthEffect="True" Depth="1.08"
+                                    CornerRadius="18" RefractionHeight="25" Refraction="24"
+                                    DepthEffect="True" Depth="1.12"
                                     ChromaticAberration="True" Dispersion="0.12"
-                                    Frost="0.20" Splay="2.85" Light="1.18"
+                                    Frost="0.23" Splay="2.85" Light="1.22"
                                     Vibrancy="1.03" Brightness="0.008" Contrast="1.03"
-                                    BackdropOpacity="0.90" SurfaceColor="#06FFFFFF"
-                                    HighlightEnabled="True" HighlightWidth="0.75"
-                                    HighlightBlurRadius="0.60" HighlightOpacity="0.68"
+                                    BackdropOpacity="0.92" SurfaceColor="#08FFFFFF"
+                                    HighlightEnabled="True" HighlightWidth="0.85"
+                                    HighlightBlurRadius="0.65" HighlightOpacity="0.76"
                                     HighlightAngle="-42" HighlightFalloff="1.40"
-                                    ShadowEnabled="True" ShadowRadius="12" ShadowOffset="1,5"
-                                    ShadowColor="#60000000" ShadowOpacity="0.78"
-                                    InnerShadowEnabled="True" InnerShadowRadius="11"
-                                    InnerShadowOffset="-1,-3" InnerShadowColor="#30000000"
-                                    InnerShadowOpacity="0.58"/>
+                                    ShadowEnabled="True" ShadowRadius="14" ShadowOffset="1,5"
+                                    ShadowColor="#60000000" ShadowOpacity="0.82"
+                                    InnerShadowEnabled="True" InnerShadowRadius="12"
+                                     InnerShadowOffset="-1,-3" InnerShadowColor="#30000000"
+                                    InnerShadowOpacity="0.64"/>
+          <Border CornerRadius="18" Background="#1C030A16" IsHitTestVisible="False"/>
           <Grid Margin="20,10" RowDefinitions="64,1,64">
             <Grid ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
                 <TextBlock x:Name="FiveTitleText" Text="5 hours" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                <TextBlock x:Name="FiveWindowText" Text="Limit window" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                <TextBlock x:Name="FiveWindowText" Text="Limit window" FontSize="10.5" Foreground="#E8FFFFFF"/>
               </StackPanel>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                  <TextBlock x:Name="FiveRemainingText" Text="Remaining" FontSize="12" Foreground="#F0FFFFFF"/>
+                  <TextBlock x:Name="FiveRemainingText" Text="Remaining" FontSize="12" FontWeight="Medium" Foreground="#FFFFFFFF"/>
                   <TextBlock x:Name="FiveQuotaValue" Grid.Column="1" Text="--%" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <ProgressBar x:Name="FiveQuotaBar" Maximum="100" Value="0" Foreground="#64A8FF"/>
-                <TextBlock x:Name="FiveQuotaCaption" Text="Waiting for update" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
+                <TextBlock x:Name="FiveQuotaCaption" Text="Waiting for update" FontSize="10.5" Foreground="#E8FFFFFF" Margin="0,4,0,0"/>
               </StackPanel>
               <Border Grid.Column="2" Background="#38FFFFFF" Margin="0,10"/>
               <Border Grid.Column="3" Background="#14FFFFFF" BorderBrush="#3FFFFFFF"
@@ -525,8 +520,8 @@
                 </Grid>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
                   <TextBlock x:Name="FiveResetTitleText" Text="Reset" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                  <TextBlock x:Name="FiveNextDateText" Text="Next date" FontSize="9.5" Foreground="#BFFFFFFF"/>
-                  <TextBlock x:Name="FiveResetCaption" Text="--" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                  <TextBlock x:Name="FiveNextDateText" Text="Next date" FontSize="9.5" Foreground="#E0FFFFFF"/>
+                  <TextBlock x:Name="FiveResetCaption" Text="--" FontSize="10.5" Foreground="#E8FFFFFF"/>
                 </StackPanel>
                 </Grid>
               </Border>
@@ -537,15 +532,15 @@
             <Grid Grid.Row="2" ColumnDefinitions="72,*,1,160">
               <StackPanel VerticalAlignment="Center" Margin="2,0,8,0">
                 <TextBlock x:Name="WeekTitleText" Text="Weekly" FontSize="13.5" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                <TextBlock x:Name="WeekWindowText" Text="Limit window" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                <TextBlock x:Name="WeekWindowText" Text="Limit window" FontSize="10.5" Foreground="#E8FFFFFF"/>
               </StackPanel>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,14,0">
                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
-                  <TextBlock x:Name="WeekRemainingText" Text="Remaining" FontSize="12" Foreground="#F0FFFFFF"/>
+                  <TextBlock x:Name="WeekRemainingText" Text="Remaining" FontSize="12" FontWeight="Medium" Foreground="#FFFFFFFF"/>
                   <TextBlock x:Name="WeekQuotaValue" Grid.Column="1" Text="--%" FontSize="15" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
                 </Grid>
                 <ProgressBar x:Name="WeekQuotaBar" Maximum="100" Value="0" Foreground="#58C7A7"/>
-                <TextBlock x:Name="WeekQuotaCaption" Text="Waiting for update" FontSize="10.5" Foreground="#CCFFFFFF" Margin="0,4,0,0"/>
+                <TextBlock x:Name="WeekQuotaCaption" Text="Waiting for update" FontSize="10.5" Foreground="#E8FFFFFF" Margin="0,4,0,0"/>
               </StackPanel>
               <Border Grid.Column="2" Background="#38FFFFFF" Margin="0,10"/>
               <Border Grid.Column="3" Background="#14FFFFFF" BorderBrush="#3FFFFFFF"
@@ -557,8 +552,8 @@
                 </Grid>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
                   <TextBlock x:Name="WeekResetTitleText" Text="Reset" FontSize="12" FontWeight="SemiBold" Foreground="#FFFFFFFF"/>
-                  <TextBlock x:Name="WeekNextDateText" Text="Next date" FontSize="9.5" Foreground="#BFFFFFFF"/>
-                  <TextBlock x:Name="WeekResetCaption" Text="--" FontSize="10.5" Foreground="#CCFFFFFF"/>
+                  <TextBlock x:Name="WeekNextDateText" Text="Next date" FontSize="9.5" Foreground="#E0FFFFFF"/>
+                  <TextBlock x:Name="WeekResetCaption" Text="--" FontSize="10.5" Foreground="#E8FFFFFF"/>
                 </StackPanel>
                 </Grid>
               </Border>
@@ -596,20 +591,23 @@
           </Grid>
 
           <StackPanel Grid.Row="1" Spacing="11">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
               <TextBlock x:Name="SceneSettingsSceneLabel" Text="Current scene" FontSize="12"
                          Foreground="#D8FFFFFF" VerticalAlignment="Center"/>
               <TextBlock x:Name="SceneSettingsSceneValue" Grid.Column="1" Text="Sun"
                          FontSize="13" FontWeight="SemiBold" Foreground="#FFFFFFFF" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7">
-                <Button x:Name="ChooseSceneImageButton" Classes="settingAction">
-                  <TextBlock x:Name="ChooseSceneImageText" Text="Choose image"/>
-                </Button>
-                <Button x:Name="ResetSceneImageButton" Classes="settingAction">
-                  <TextBlock x:Name="ResetSceneImageText" Text="Restore default"/>
-                </Button>
-              </StackPanel>
             </Grid>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="7">
+              <Button x:Name="NoSceneImageButton" Classes="settingAction">
+                <TextBlock x:Name="NoSceneImageText" Text="No background"/>
+              </Button>
+              <Button x:Name="ChooseSceneImageButton" Classes="settingAction">
+                <TextBlock x:Name="ChooseSceneImageText" Text="Choose image"/>
+              </Button>
+              <Button x:Name="ResetSceneImageButton" Classes="settingAction">
+                <TextBlock x:Name="ResetSceneImageText" Text="Restore default"/>
+              </Button>
+            </StackPanel>
             <TextBlock x:Name="SceneImageNameText" Text="Built-in image" FontSize="10.5"
                        Foreground="#B8FFFFFF" TextTrimming="CharacterEllipsis"/>
 
@@ -651,6 +649,10 @@
     <Grid glass:LiquidGlassBackdrop.IsExcludedFromCapture="True">
       <Border x:Name="MoveGrip" Width="190" Height="52" HorizontalAlignment="Left" VerticalAlignment="Top"
               Background="Transparent" Margin="10,0,0,0"/>
+      <!-- Keep the top 10 px for native vertical resize; the strip below makes the
+           otherwise-empty upper-right area draggable without covering the buttons. -->
+      <Border x:Name="TopMoveGrip" Height="8" VerticalAlignment="Top"
+              Background="Transparent" Margin="190,10,8,0"/>
       <Border x:Name="TopGrip" Height="10" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNorthSouth"/>
       <Border x:Name="BottomGrip" Height="10" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNorthSouth"/>
       <Border x:Name="LeftGrip" Width="10" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWestEast"/>

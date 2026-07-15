@@ -100,6 +100,7 @@ public sealed partial class MainWindow : Window
         this.FindControl<Button>("LanguageButton")!.Click += (_, _) => ToggleLanguage();
         this.FindControl<Button>("SettingsButton")!.Click += (_, _) => ToggleSceneSettings(true);
         this.FindControl<Button>("SettingsCloseButton")!.Click += (_, _) => ToggleSceneSettings(false);
+        this.FindControl<Button>("NoSceneImageButton")!.Click += (_, _) => DisableCurrentSceneImage();
         this.FindControl<Button>("ChooseSceneImageButton")!.Click += async (_, _) => await ChooseSceneImageAsync();
         this.FindControl<Button>("ResetSceneImageButton")!.Click += (_, _) => ResetCurrentSceneSettings();
         this.FindControl<Button>("SaveSceneSettingsButton")!.Click += (_, _) => SaveSceneSettings();
@@ -171,7 +172,7 @@ public sealed partial class MainWindow : Window
         {
             new("demo-1", "Design liquid-glass dashboard", "gpt-5.6-sol", "xhigh", "priority", 128_460),
             new("demo-2", "Refine Windows interaction", "gpt-5.6-luna", "high", "default", 86_240),
-            new("demo-3", "Prepare V2.1.3 release", "gpt-5.6-terra", "medium", "default", 52_810)
+            new("demo-3", "Prepare V2.1.4 release", "gpt-5.6-terra", "medium", "default", 52_810)
         };
         foreach (MonitorData.TaskSnapshot snapshot in demoTasks)
             Tasks.Add(new TaskRow(snapshot, _isEnglish) { ShowTokens = _showTokens });
@@ -306,14 +307,36 @@ public sealed partial class MainWindow : Window
 
     private void WireWindowGrips()
     {
-        this.FindControl<Border>("MoveGrip")!.PointerPressed += (_, e) =>
+        WireMoveGrip("MoveGrip");
+        WireMoveGrip("TopMoveGrip");
+        this.FindControl<Grid>("TitleBar")!.PointerPressed += (_, e) =>
         {
-            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginNativeDrag(2);
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && !IsInteractiveSource(e.Source))
+                BeginNativeDrag(2);
         };
         WireResizeGrip("TopGrip", WindowEdge.North);
         WireResizeGrip("BottomGrip", WindowEdge.South);
         WireResizeGrip("LeftGrip", WindowEdge.West);
         WireResizeGrip("RightGrip", WindowEdge.East);
+    }
+
+    private void WireMoveGrip(string name)
+    {
+        this.FindControl<Border>(name)!.PointerPressed += (_, e) =>
+        {
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+                BeginNativeDrag(2);
+        };
+    }
+
+    private static bool IsInteractiveSource(object? source)
+    {
+        for (Control? control = source as Control; control is not null; control = control.Parent as Control)
+        {
+            if (control is Button or ComboBox or Slider or TextBox)
+                return true;
+        }
+        return false;
     }
 
     private void WireResizeGrip(string name, WindowEdge edge)
@@ -360,15 +383,19 @@ public sealed partial class MainWindow : Window
         if (!force && _sceneIsDay == isDay) return;
 
         SceneViewSettings settings = GetSceneSettings(isDay);
-        Bitmap next = LoadSceneBitmap(isDay, settings);
+        Bitmap? next = LoadSceneBitmap(isDay, settings);
         SceneBackdrop backdrop = this.FindControl<SceneBackdrop>("BackdropImage")!;
         backdrop.Source = next;
 
-        Color lensTint = Color.Parse(isDay ? "#140D0502" : "#0C020A18");
+        Color lensTint = Color.Parse(!settings.UseBackgroundImage
+            ? "#30030A16"
+            : isDay ? "#240D0502" : "#1C020A18");
         this.FindControl<LiquidGlassSurface>("TaskLens")!.SurfaceColor = lensTint;
         this.FindControl<LiquidGlassSurface>("UsageLens")!.SurfaceColor = lensTint;
         this.FindControl<Border>("ForegroundLayer")!.Background = new SolidColorBrush(
-            Color.Parse(isDay ? "#08080302" : "#04020710"));
+            Color.Parse(!settings.UseBackgroundImage
+                ? "#18030A16"
+                : isDay ? "#10080302" : "#0C020710"));
         Bitmap? old = _sceneBitmap;
         _sceneBitmap = next;
         _sceneIsDay = isDay;
@@ -380,8 +407,9 @@ public sealed partial class MainWindow : Window
 
     private SceneViewSettings GetSceneSettings(bool isDay) => isDay ? _sceneSettings.Day : _sceneSettings.Night;
 
-    private static Bitmap LoadSceneBitmap(bool isDay, SceneViewSettings settings)
+    private static Bitmap? LoadSceneBitmap(bool isDay, SceneViewSettings settings)
     {
+        if (!settings.UseBackgroundImage) return null;
         if (!string.IsNullOrWhiteSpace(settings.ImagePath) && File.Exists(settings.ImagePath))
         {
             try
@@ -414,10 +442,28 @@ public sealed partial class MainWindow : Window
         zoom.Value = settings.Zoom;
         this.FindControl<Slider>("ScenePositionXSlider")!.Value = settings.PositionX * 100;
         this.FindControl<Slider>("ScenePositionYSlider")!.Value = settings.PositionY * 100;
-        this.FindControl<TextBlock>("SceneSettingsSceneValue")!.Text = isDay ? T("Sun", "太阳") : T("Moon", "月球");
-        this.FindControl<TextBlock>("SceneImageNameText")!.Text = string.IsNullOrWhiteSpace(settings.ImagePath)
-            ? T("Built-in image", "内置图片")
-            : Path.GetFileName(settings.ImagePath);
+        this.FindControl<TextBlock>("SceneSettingsSceneValue")!.Text = !settings.UseBackgroundImage
+            ? T("Glass only", "仅玻璃")
+            : isDay ? T("Sun", "太阳") : T("Moon", "月球");
+        this.FindControl<TextBlock>("SceneImageNameText")!.Text = !settings.UseBackgroundImage
+            ? T("No background image", "不使用背景图")
+            : string.IsNullOrWhiteSpace(settings.ImagePath)
+                ? T("Built-in image", "内置图片")
+                : Path.GetFileName(settings.ImagePath);
+        zoom.IsEnabled = settings.UseBackgroundImage;
+        this.FindControl<Slider>("ScenePositionXSlider")!.IsEnabled = settings.UseBackgroundImage;
+        this.FindControl<Slider>("ScenePositionYSlider")!.IsEnabled = settings.UseBackgroundImage;
+        Button noImageButton = this.FindControl<Button>("NoSceneImageButton")!;
+        if (!settings.UseBackgroundImage)
+        {
+            noImageButton.Background = new SolidColorBrush(Color.Parse("#705B3A85"));
+            noImageButton.BorderBrush = new SolidColorBrush(Color.Parse("#D8D3AEFF"));
+        }
+        else
+        {
+            noImageButton.ClearValue(Button.BackgroundProperty);
+            noImageButton.ClearValue(Button.BorderBrushProperty);
+        }
         UpdateSceneSettingValueLabels(settings);
         _syncingSceneControls = false;
     }
@@ -460,7 +506,17 @@ public sealed partial class MainWindow : Window
         string? path = files.FirstOrDefault()?.TryGetLocalPath();
         if (string.IsNullOrWhiteSpace(path)) return;
         bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
-        GetSceneSettings(isDay).ImagePath = path;
+        SceneViewSettings settings = GetSceneSettings(isDay);
+        settings.UseBackgroundImage = true;
+        settings.ImagePath = path;
+        MarkSceneSettingsDirty();
+        ApplySceneBackground(force: true);
+    }
+
+    private void DisableCurrentSceneImage()
+    {
+        bool isDay = _sceneIsDay ?? DateTime.Now.Hour is >= 7 and < 19;
+        GetSceneSettings(isDay).UseBackgroundImage = false;
         MarkSceneSettingsDirty();
         ApplySceneBackground(force: true);
     }
@@ -650,6 +706,7 @@ public sealed partial class MainWindow : Window
             "Adjust the current scene without changing the window layout",
             "调整当前场景，不改变窗口布局");
         this.FindControl<TextBlock>("SceneSettingsSceneLabel")!.Text = T("Current scene", "当前场景");
+        this.FindControl<TextBlock>("NoSceneImageText")!.Text = T("No background", "不使用背景图");
         this.FindControl<TextBlock>("ChooseSceneImageText")!.Text = T("Choose image", "选择图片");
         this.FindControl<TextBlock>("ResetSceneImageText")!.Text = T("Restore default", "恢复默认");
         this.FindControl<TextBlock>("SceneZoomLabel")!.Text = T("Planet size", "星球大小");
@@ -699,14 +756,19 @@ public sealed partial class MainWindow : Window
     private void UpdatePinVisual()
     {
         bool pinned = Topmost;
-        this.FindControl<PathIcon>("PinIdleIcon")!.IsVisible = !pinned;
-        this.FindControl<PathIcon>("PinActiveIcon")!.IsVisible = pinned;
-        this.FindControl<Avalonia.Controls.Shapes.Ellipse>("PinActiveDot")!.IsVisible = pinned;
+        PathIcon icon = this.FindControl<PathIcon>("PinIcon")!;
+        icon.Foreground = new SolidColorBrush(Color.Parse(pinned ? "#E2C4FF" : "#FFFFFFFF"));
         Button button = this.FindControl<Button>("PinButton")!;
         if (pinned)
-            button.Background = new SolidColorBrush(Color.Parse("#5A68458E"));
+        {
+            button.Background = new SolidColorBrush(Color.Parse("#705B3A85"));
+            button.BorderBrush = new SolidColorBrush(Color.Parse("#D8D3AEFF"));
+        }
         else
+        {
             button.ClearValue(Button.BackgroundProperty);
+            button.BorderBrush = _flowBorderBrush;
+        }
         ToolTip.SetTip(button, pinned
             ? T("Unpin window", "取消置顶")
             : T("Keep window on top", "窗口置顶"));

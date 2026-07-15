@@ -42,6 +42,7 @@ internal sealed class SceneSettingsStore
 
 internal sealed class SceneViewSettings
 {
+    public bool UseBackgroundImage { get; set; } = true;
     public string? ImagePath { get; set; }
     public double Zoom { get; set; }
     public double PositionX { get; set; }
@@ -49,6 +50,7 @@ internal sealed class SceneViewSettings
 
     public static SceneViewSettings CreateDayDefault() => new()
     {
+        UseBackgroundImage = true,
         Zoom = 1.00,
         PositionX = 0.20,
         PositionY = 0.0
@@ -56,6 +58,7 @@ internal sealed class SceneViewSettings
 
     public static SceneViewSettings CreateNightDefault() => new()
     {
+        UseBackgroundImage = true,
         Zoom = 1.00,
         PositionX = 0.20,
         PositionY = 0.0
@@ -64,6 +67,7 @@ internal sealed class SceneViewSettings
     public void Reset(bool isDay)
     {
         SceneViewSettings defaults = isDay ? CreateDayDefault() : CreateNightDefault();
+        UseBackgroundImage = true;
         ImagePath = null;
         Zoom = defaults.Zoom;
         PositionX = defaults.PositionX;
